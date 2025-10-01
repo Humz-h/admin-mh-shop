@@ -53,9 +53,28 @@
   </div>
 
   <!-- Loading State -->
-  <div class="loading-container" *ngIf="isLoading">
+  <div class="loading-container" *ngIf="isLoading && !showSkeleton">
     <div class="loading-spinner"></div>
     <p>Đang tải danh sách sản phẩm...</p>
+  </div>
+
+  <!-- Skeleton Loading -->
+  <div class="skeleton-container" *ngIf="showSkeleton">
+    <div class="skeleton-table">
+      <div class="skeleton-header">
+        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
+      </div>
+      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
+        <div class="skeleton-cell skeleton-image"></div>
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-badge"></div>
+        <div class="skeleton-cell skeleton-price"></div>
+        <div class="skeleton-cell skeleton-stock"></div>
+        <div class="skeleton-cell skeleton-badge"></div>
+        <div class="skeleton-cell skeleton-date"></div>
+        <div class="skeleton-cell skeleton-actions"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Error State -->
@@ -68,7 +87,7 @@
   </div>
 
   <!-- Products Table -->
-  <div class="table-container" *ngIf="!isLoading && !error">
+  <div class="table-container" *ngIf="!isLoading && !error && !showSkeleton">
     <table class="products-table">
       <thead>
         <tr>
@@ -85,7 +104,12 @@
       <tbody>
         <tr *ngFor="let product of filteredProducts; trackBy: trackByProductId">
           <td class="product-image">
-            <img [src]="product.imageUrl || 'https://via.placeholder.com/100x100?text=No+Image'" [alt]="product.name" class="product-thumbnail">
+            <img 
+              [src]="getProductImage(product)" 
+              [alt]="product.name" 
+              class="product-thumbnail"
+              loading="lazy"
+              (error)="onImageError($event)">
           </td>
           <td class="product-name">
             <div class="name-cell">
@@ -99,7 +123,7 @@
             </span>
           </td>
           <td class="product-price">
-            <span class="price">{{ product.price | currency:'VND':'symbol':'1.0-0':'vi' }}</span>
+            <span class="price">{{ formatCurrency(product.price) }}</span>
           </td>
           <td class="product-stock">
             <span class="stock" [class]="product.stock < 10 ? 'low-stock' : 'normal-stock'">
@@ -130,6 +154,17 @@
         </tr>
       </tbody>
     </table>
+  </div>
+
+  <!-- Load More Button -->
+  <div class="load-more-container" *ngIf="currentPage < totalPages && !isLoading && !error && !showSkeleton">
+    <button 
+      class="btn btn-secondary load-more-btn" 
+      (click)="loadMoreProducts()"
+      [disabled]="isLoadingMore">
+      <span *ngIf="!isLoadingMore">Tải thêm sản phẩm</span>
+      <span *ngIf="isLoadingMore">Đang tải...</span>
+    </button>
   </div>
 
   <!-- Pagination -->

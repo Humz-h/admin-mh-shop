@@ -1,0 +1,168 @@
+<div class="order-management">
+  <!-- Header -->
+  <div class="page-header">
+    <div class="header-left">
+      <button class="back-btn" (click)="goBack()">
+        <span class="back-icon">←</span>
+        Quay lại
+      </button>
+      <h1 class="page-title">Quản lý đơn hàng</h1>
+    </div>
+    <div class="header-right">
+      <button class="refresh-btn" (click)="loadOrders()" [disabled]="loading">
+        <span class="refresh-icon">🔄</span>
+        Làm mới
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <div class="filter-group">
+      <label for="search">Tìm kiếm:</label>
+      <input 
+        type="text" 
+        id="search"
+        [(ngModel)]="searchTerm" 
+        placeholder="Tìm theo mã đơn hàng, tên khách hàng..."
+        class="search-input"
+        (keyup.enter)="onSearch()"
+      >
+      <button class="search-btn" (click)="onSearch()">🔍</button>
+    </div>
+    
+    <div class="filter-group">
+      <label for="status">Trạng thái:</label>
+      <select 
+        id="status"
+        [(ngModel)]="selectedStatus" 
+        (change)="onStatusChange(selectedStatus)"
+        class="status-select"
+      >
+        <option value="">Tất cả</option>
+        <option value="pending">Chờ xử lý</option>
+        <option value="paid">Đã thanh toán</option>
+        <option value="shipped">Đang giao</option>
+        <option value="delivered">Đã giao</option>
+        <option value="cancelled">Đã hủy</option>
+      </select>
+    </div>
+
+    <button class="clear-btn" (click)="clearSearch()">
+      Xóa bộ lọc
+    </button>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="loading" class="loading-state">
+    <div class="spinner"></div>
+    <p>Đang tải dữ liệu...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error && !loading" class="error-state">
+    <div class="error-icon">⚠️</div>
+    <p>{{ error }}</p>
+    <button class="retry-btn" (click)="loadOrders()">Thử lại</button>
+  </div>
+
+  <!-- Orders Table -->
+  <div *ngIf="!loading && !error" class="orders-container">
+    <div class="table-header">
+      <h3>Tổng cộng: {{ orders.length }} đơn hàng</h3>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="orders-table">
+        <thead>
+          <tr>
+            <th>Mã đơn hàng</th>
+            <th>Khách hàng</th>
+            <th>Tổng tiền</th>
+            <th>Phí ship</th>
+            <th>Giảm giá</th>
+            <th>Trạng thái</th>
+            <th>Ngày đặt</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let order of orders" class="order-row">
+            <td class="order-number">
+              <strong>{{ order.orderNumber }}</strong>
+            </td>
+            <td class="customer-info">
+              <div class="customer-name">{{ order.userName }}</div>
+              <div class="customer-id">ID: {{ order.userId }}</div>
+            </td>
+            <td class="amount">
+              <strong>{{ formatCurrency(order.totalAmount) }}</strong>
+            </td>
+            <td class="shipping-fee">
+              {{ formatCurrency(order.shippingFee) }}
+            </td>
+            <td class="discount">
+              <span *ngIf="order.discountAmount > 0" class="discount-amount">
+                -{{ formatCurrency(order.discountAmount) }}
+              </span>
+              <span *ngIf="order.discountAmount === 0" class="no-discount">
+                Không
+              </span>
+            </td>
+            <td class="status">
+              <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
+                {{ getStatusText(order.status) }}
+              </span>
+            </td>
+            <td class="order-date">
+              {{ formatDate(order.placedAt) }}
+            </td>
+            <td class="actions">
+              <button class="action-btn view-btn" (click)="viewOrderDetails(order)">
+                👁️
+              </button>
+              <select 
+                class="status-select-small" 
+                [value]="order.status"
+                (change)="onOrderStatusChange(order, $event)"
+              >
+                <option value="pending">Chờ xử lý</option>
+                <option value="paid">Đã thanh toán</option>
+                <option value="shipped">Đang giao</option>
+                <option value="delivered">Đã giao</option>
+                <option value="cancelled">Đã hủy</option>
+              </select>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="orders.length === 0" class="empty-state">
+      <div class="empty-icon">📦</div>
+      <h3>Không có đơn hàng nào</h3>
+      <p>Chưa có đơn hàng nào được tìm thấy với bộ lọc hiện tại.</p>
+    </div>
+  </div>
+
+  <!-- Pagination -->
+  <div *ngIf="!loading && !error && orders.length > 0" class="pagination">
+    <button 
+      class="page-btn" 
+      [disabled]="currentPage === 1"
+      (click)="onPageChange(currentPage - 1)"
+    >
+      Trước
+    </button>
+    <span class="page-info">
+      Trang {{ currentPage }}
+    </span>
+    <button 
+      class="page-btn" 
+      (click)="onPageChange(currentPage + 1)"
+    >
+      Sau
+    </button>
+  </div>
+</div>

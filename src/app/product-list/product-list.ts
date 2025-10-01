@@ -1,10 +1,11 @@
 // Import các module và service cần thiết
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ProductService, Product } from '../services/product';
+import { ProductService, Product, ProductResponse } from '../services/product';
 import { HttpClientModule } from '@angular/common/http';
+import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 
 // Interface mở rộng Product với các thuộc tính bổ sung
 interface ProductWithExtras extends Product {
@@ -19,9 +20,10 @@ interface ProductWithExtras extends Product {
   selector: 'app-product-list',
   imports: [CommonModule, FormsModule, HttpClientModule],
   templateUrl: './product-list.html',
-  styleUrl: './product-list.scss'
+  styleUrl: './product-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductList implements OnInit {
+export class ProductList implements OnInit, OnDestroy {
   // Danh sách sản phẩm gốc và đã lọc
   products: ProductWithExtras[] = [];
   filteredProducts: ProductWithExtras[] = [];
@@ -33,13 +35,13 @@ export class ProductList implements OnInit {
   
   // Trạng thái loading và lỗi
   isLoading: boolean = false;     // Đang tải dữ liệu
+  isLoadingMore: boolean = false; // Đang tải thêm dữ liệu
   error: string = '';             // Thông báo lỗi
+  showSkeleton: boolean = true;   // Hiển thị skeleton loading
   
-  // Cache và performance
-  private productsCache: ProductWithExtras[] | null = null;
-  private lastLoadTime: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
-  private searchTimeout: any = null;
+  // Performance và lifecycle
+  private destroy$ = new Subject<void>();
+  private searchSubject = new Subject<string>();
   
   // Phân trang
   currentPage: number = 1;        // Trang hiện tại
@@ -57,59 +59,96 @@ export class ProductList implements OnInit {
   // Constructor - inject ProductService và Router
   constructor(
     private productService: ProductService,
-    private router: Router
-  ) {}
+    private router: Router,
+    private cdr: ChangeDetectorRef
+  ) {
+    // Setup search debouncing
+    this.searchSubject.pipe(
+      debounceTime(300),
+      distinctUntilChanged(),
+      takeUntil(this.destroy$)
+    ).subscribe(searchTerm => {
+      this.searchTerm = searchTerm;
+      this.filterProducts();
+    });
+  }
 
   // Khởi tạo component - tải danh sách sản phẩm
   ngOnInit() {
     this.loadProducts();
   }
 
+  // Cleanup khi component bị destroy
+  ngOnDestroy() {
+    this.destroy$.next();
+    this.destroy$.complete();
+  }
+
   // Tải danh sách sản phẩm từ API với cache
   loadProducts(forceReload: boolean = false) {
-    // Kiểm tra cache trước
-    if (!forceReload && this.isCacheValid()) {
-      this.products = this.productsCache!;
-      this.filterProducts();
-      return;
-    }
-
     this.isLoading = true;
+    this.showSkeleton = true;
     this.error = '';
     
-    this.productService.getAllProducts().subscribe({
-      next: (products) => {
-        // Map dữ liệu sản phẩm và thêm các thuộc tính bổ sung
-        this.products = products.map(product => ({
-          ...product,
-          sku: `SKU-${product.id.toString().padStart(3, '0')}`,  // Tạo mã SKU
-          category: this.getCategoryFromName(product.name),      // Phân loại theo tên
-          status: product.stock > 0 ? 'active' : 'inactive',    // Trạng thái theo tồn kho
-          createdAt: new Date()                                  // Ngày tạo
-        }));
-        
-        // Lưu vào cache
-        this.productsCache = [...this.products];
-        this.lastLoadTime = Date.now();
-        
-        this.filterProducts();  // Áp dụng bộ lọc hiện tại
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading products:', error);
-        this.error = 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.';
-        this.isLoading = false;
-      }
-    });
+    // Thử sử dụng pagination API trước
+    this.productService.getProductsPaginated(this.currentPage, this.itemsPerPage, this.searchTerm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          // Map dữ liệu sản phẩm và thêm các thuộc tính bổ sung
+          this.products = response.data.map(product => ({
+            ...product,
+            sku: `SKU-${product.id.toString().padStart(3, '0')}`,  // Tạo mã SKU
+            category: this.getCategoryFromName(product.name),      // Phân loại theo tên
+            status: product.stock > 0 ? 'active' : 'inactive',    // Trạng thái theo tồn kho
+            createdAt: new Date()                                  // Ngày tạo
+          }));
+          
+          this.totalPages = Math.ceil(response.total / this.itemsPerPage);
+          this.filteredProducts = [...this.products];
+          
+          this.isLoading = false;
+          this.showSkeleton = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error loading paginated products:', error);
+          // Fallback to getAllProducts
+          this.loadAllProducts();
+        }
+      });
   }
 
-  // Kiểm tra cache có còn hiệu lực không
-  private isCacheValid(): boolean {
-    if (!this.productsCache || this.productsCache.length === 0) {
-      return false;
-    }
-    return (Date.now() - this.lastLoadTime) < this.CACHE_DURATION;
+  // Fallback method để load tất cả sản phẩm
+  private loadAllProducts() {
+    this.productService.getAllProducts()
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (products) => {
+          // Map dữ liệu sản phẩm và thêm các thuộc tính bổ sung
+          this.products = products.map(product => ({
+            ...product,
+            sku: `SKU-${product.id.toString().padStart(3, '0')}`,  // Tạo mã SKU
+            category: this.getCategoryFromName(product.name),      // Phân loại theo tên
+            status: product.stock > 0 ? 'active' : 'inactive',    // Trạng thái theo tồn kho
+            createdAt: new Date()                                  // Ngày tạo
+          }));
+          
+          this.filterProducts();  // Áp dụng bộ lọc hiện tại
+          this.isLoading = false;
+          this.showSkeleton = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error loading products:', error);
+          this.error = 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.';
+          this.isLoading = false;
+          this.showSkeleton = false;
+          this.cdr.markForCheck();
+        }
+      });
   }
+
 
   // Phân loại sản phẩm dựa trên tên sản phẩm
   getCategoryFromName(name: string): string {
@@ -164,17 +203,12 @@ export class ProductList implements OnInit {
     this.filteredProducts = filtered;
     this.currentPage = 1;  // Reset về trang đầu
     this.calculateTotalPages();
+    this.cdr.markForCheck();
   }
 
   // Tìm kiếm với debounce để tối ưu performance
   onSearchInput() {
-    if (this.searchTimeout) {
-      clearTimeout(this.searchTimeout);
-    }
-    
-    this.searchTimeout = setTimeout(() => {
-      this.filterProducts();
-    }, 300); // Delay 300ms
+    this.searchSubject.next(this.searchTerm);
   }
 
   // Sắp xếp danh sách sản phẩm theo tiêu chí được chọn
@@ -226,9 +260,76 @@ export class ProductList implements OnInit {
     return this.filteredProducts.slice(startIndex, endIndex);
   }
 
+  // Load more products (infinite scroll)
+  loadMoreProducts() {
+    if (this.isLoadingMore || this.currentPage >= this.totalPages) {
+      return;
+    }
+
+    this.isLoadingMore = true;
+    this.currentPage++;
+    
+    this.productService.getProductsPaginated(this.currentPage, this.itemsPerPage, this.searchTerm)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          const newProducts: ProductWithExtras[] = response.data.map(product => ({
+            ...product,
+            sku: `SKU-${product.id.toString().padStart(3, '0')}`,
+            category: this.getCategoryFromName(product.name),
+            status: (product.stock > 0 ? 'active' : 'inactive') as 'active' | 'inactive',
+            createdAt: new Date()
+          }));
+          
+          this.products = [...this.products, ...newProducts];
+          this.filteredProducts = [...this.filteredProducts, ...newProducts];
+          this.isLoadingMore = false;
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error loading more products:', error);
+          this.isLoadingMore = false;
+          this.currentPage--; // Revert page increment
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
   // Track function cho ngFor để tối ưu performance
   trackByProductId(index: number, product: ProductWithExtras): number {
     return product.id;
+  }
+
+  // Lấy URL hình ảnh sản phẩm với fallback
+  getProductImage(product: ProductWithExtras): string {
+    if (product.imageUrl && product.imageUrl.trim() !== '') {
+      return product.imageUrl;
+    }
+    
+    // Tạo hình ảnh placeholder dựa trên danh mục sản phẩm
+    const category = product.category || 'electronics';
+    const colors = {
+      'electronics': '4F46E5', // Indigo
+      'clothing': 'EC4899',    // Pink
+      'books': '10B981',       // Emerald
+      'home': 'F59E0B'         // Amber
+    };
+    
+    const color = colors[category as keyof typeof colors] || '6B7280';
+    return `https://via.placeholder.com/100x100/${color}/FFFFFF?text=${encodeURIComponent(product.name.charAt(0).toUpperCase())}`;
+  }
+
+  // Xử lý lỗi khi load hình ảnh
+  onImageError(event: any): void {
+    event.target.src = 'https://via.placeholder.com/100x100?text=No+Image';
+  }
+
+  // Format tiền tệ theo định dạng Việt Nam
+  formatCurrency(price: number): string {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(price);
   }
 
   // Chuyển đổi mã danh mục thành tên hiển thị tiếng Việt
@@ -280,10 +381,10 @@ export class ProductList implements OnInit {
     if (confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"?`)) {
       this.productService.deleteProduct(product.id).subscribe({
         next: () => {
-          // Xóa khỏi cache và danh sách hiện tại
+          // Xóa khỏi danh sách hiện tại
           this.products = this.products.filter(p => p.id !== product.id);
-          this.productsCache = this.productsCache?.filter(p => p.id !== product.id) || null;
           this.filterProducts(); // Cập nhật danh sách đã lọc
+          this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Error deleting product:', error);
@@ -312,10 +413,10 @@ export class ProductList implements OnInit {
           const index = this.products.findIndex(p => p.id === this.selectedProduct.id);
           if (index !== -1) {
             this.products[index] = { ...this.products[index], ...productData };
-            this.productsCache = [...this.products];
           }
           this.filterProducts(); // Cập nhật danh sách đã lọc
           this.closeModal();
+          this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Error updating product:', error);
@@ -335,9 +436,9 @@ export class ProductList implements OnInit {
             createdAt: new Date()
           };
           this.products.push(productWithExtras);
-          this.productsCache = [...this.products];
           this.filterProducts(); // Cập nhật danh sách đã lọc
           this.closeModal();
+          this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Error creating product:', error);

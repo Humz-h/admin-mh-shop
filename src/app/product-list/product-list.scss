@@ -189,6 +189,13 @@
   object-fit: cover;
   border-radius: 8px;
   border: 2px solid #e5e7eb;
+  background-color: #f9fafb;
+  display: block;
+  
+  &:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+  }
 }
 
 .name-cell {
@@ -337,6 +344,24 @@
 .btn-view:hover {
   background-color: #dcfce7;
   transform: scale(1.1);
+}
+
+/* Load More Button */
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin: 2rem 0;
+}
+
+.load-more-btn {
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  min-width: 200px;
+  
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
 }
 
 /* Pagination */
@@ -531,6 +556,90 @@
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Skeleton Loading */
+.skeleton-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  overflow: hidden;
+}
+
+.skeleton-table {
+  width: 100%;
+}
+
+.skeleton-header {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px 100px 80px 100px 120px 120px;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.skeleton-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 120px 100px 80px 100px 120px 120px;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.skeleton-cell {
+  height: 20px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: skeleton-loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-image {
+  height: 60px;
+  width: 60px;
+  border-radius: 8px;
+}
+
+.skeleton-text {
+  height: 16px;
+  width: 80%;
+}
+
+.skeleton-badge {
+  height: 24px;
+  width: 60px;
+  border-radius: 12px;
+}
+
+.skeleton-price {
+  height: 18px;
+  width: 70px;
+}
+
+.skeleton-stock {
+  height: 18px;
+  width: 40px;
+}
+
+.skeleton-date {
+  height: 16px;
+  width: 90px;
+}
+
+.skeleton-actions {
+  height: 32px;
+  width: 100px;
+  border-radius: 6px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .loading-container p {

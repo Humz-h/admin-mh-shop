@@ -13,4 +13,8 @@ export class Dashboard {
   navigateToProducts() {
     this.router.navigate(['/products']);
   }
+
+  navigateToOrders() {
+    this.router.navigate(['/orders']);
+  }
 }
