@@ -39,6 +39,7 @@ export class OrderService {
   private apiUrl = 'http://localhost:5000/api/Orders';
   private cache = new Map<string, any>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+  private loadingStates = new Map<string, Observable<Order[]>>();
 
   constructor(private http: HttpClient) { }
 
@@ -51,6 +52,11 @@ export class OrderService {
       return of(cached);
     }
 
+    // Kiểm tra xem có request đang loading không
+    if (this.loadingStates.has(cacheKey)) {
+      return this.loadingStates.get(cacheKey)!;
+    }
+
     let params = new HttpParams()
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
@@ -59,17 +65,22 @@ export class OrderService {
       params = params.set('userId', userId.toString());
     }
 
-    return this.http.get<Order[]>(this.apiUrl, { params }).pipe(
+    const request$ = this.http.get<Order[]>(this.apiUrl, { params }).pipe(
       map(orders => {
         this.setCachedData(cacheKey, orders);
-        return orders;
+        this.loadingStates.delete(cacheKey);
+        return orders || [];
       }),
       shareReplay(1),
       catchError(error => {
         console.error('Error loading orders:', error);
+        this.loadingStates.delete(cacheKey);
         return of([]);
       })
     );
+
+    this.loadingStates.set(cacheKey, request$);
+    return request$;
   }
 
   // Lấy đơn hàng theo ID

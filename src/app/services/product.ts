@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable, BehaviorSubject, of } from 'rxjs';
-import { map, catchError, shareReplay } from 'rxjs/operators';
+import { map, catchError, shareReplay, timeout } from 'rxjs/operators';
 
 export interface Product {
   id: number;
@@ -26,6 +26,7 @@ export class ProductService {
   private apiUrl = 'http://localhost:5000/api/Products';
   private cache = new Map<string, any>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+  private loadingStates = new Map<string, Observable<any>>(); // Tránh duplicate requests
 
   constructor(private http: HttpClient) { }
 
@@ -35,20 +36,35 @@ export class ProductService {
     const cached = this.getCachedData(cacheKey);
     
     if (cached) {
+      console.log('Using cached products:', cached.length);
       return of(cached);
     }
 
-    return this.http.get<Product[]>(this.apiUrl).pipe(
+    // Kiểm tra xem có request đang chạy không
+    if (this.loadingStates.has(cacheKey)) {
+      console.log('Request already in progress, returning existing observable');
+      return this.loadingStates.get(cacheKey)!;
+    }
+
+    console.log('Fetching products from API...');
+    const request$ = this.http.get<Product[]>(`${this.apiUrl}?page=1&pageSize=20`).pipe(
+      timeout(5000), // 5 giây timeout
       map(products => {
+        console.log('Products loaded from API:', products.length);
         this.setCachedData(cacheKey, products);
+        this.loadingStates.delete(cacheKey); // Xóa loading state
         return products;
       }),
       shareReplay(1),
       catchError(error => {
         console.error('Error loading products:', error);
+        this.loadingStates.delete(cacheKey); // Xóa loading state
         return of([]);
       })
     );
+
+    this.loadingStates.set(cacheKey, request$);
+    return request$;
   }
 
   // Lấy sản phẩm với pagination
@@ -180,5 +196,10 @@ export class ProductService {
     } else {
       this.clearCache();
     }
+  }
+
+  // Upload ảnh lên server
+  uploadImage(formData: FormData): Observable<{ imageUrl: string }> {
+    return this.http.post<{ imageUrl: string }>(`${this.apiUrl}/images/upload`, formData);
   }
 }

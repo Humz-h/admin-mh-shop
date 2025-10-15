@@ -9,6 +9,7 @@
       <h1 class="page-title">Quản lý đơn hàng</h1>
     </div>
     <div class="header-right">
+      
       <button class="refresh-btn" (click)="loadOrders()" [disabled]="loading">
         <span class="refresh-icon">🔄</span>
         Làm mới
@@ -26,6 +27,7 @@
         [(ngModel)]="searchTerm" 
         placeholder="Tìm theo mã đơn hàng, tên khách hàng..."
         class="search-input"
+        (input)="onSearchInput($event)"
         (keyup.enter)="onSearch()"
       >
       <button class="search-btn" (click)="onSearch()">🔍</button>
@@ -55,8 +57,19 @@
 
   <!-- Loading State -->
   <div *ngIf="loading" class="loading-state">
-    <div class="spinner"></div>
-    <p>Đang tải dữ liệu...</p>
+    <div class="skeleton-container">
+      <div class="skeleton-header"></div>
+      <div class="skeleton-row" *ngFor="let item of [1,2,3,4,5]">
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+        <div class="skeleton-cell"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Error State -->

@@ -52,6 +52,7 @@ export class ProductList implements OnInit, OnDestroy {
   showModal: boolean = false;     // Hiển thị modal
   isEditing: boolean = false;     // Đang chỉnh sửa hay thêm mới
   selectedProduct: ProductWithExtras = this.getEmptyProduct(); // Sản phẩm được chọn
+  selectedFile: File | null = null; // File ảnh được chọn
   
   // Math object để sử dụng trong template
   Math = Math;
@@ -90,13 +91,16 @@ export class ProductList implements OnInit, OnDestroy {
     this.showSkeleton = true;
     this.error = '';
     
-    // Thử sử dụng pagination API trước
-    this.productService.getProductsPaginated(this.currentPage, this.itemsPerPage, this.searchTerm)
+    console.log('Loading products...');
+    
+    // Sử dụng getAllProducts để load nhanh hơn
+    this.productService.getAllProducts()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (response) => {
+        next: (products) => {
+          console.log('Products received:', products.length);
           // Map dữ liệu sản phẩm và thêm các thuộc tính bổ sung
-          this.products = response.data.map(product => ({
+          this.products = products.map(product => ({
             ...product,
             sku: `SKU-${product.id.toString().padStart(3, '0')}`,  // Tạo mã SKU
             category: this.getCategoryFromName(product.name),      // Phân loại theo tên
@@ -104,7 +108,7 @@ export class ProductList implements OnInit, OnDestroy {
             createdAt: new Date()                                  // Ngày tạo
           }));
           
-          this.totalPages = Math.ceil(response.total / this.itemsPerPage);
+          this.totalPages = Math.ceil(this.products.length / this.itemsPerPage);
           this.filteredProducts = [...this.products];
           
           this.isLoading = false;
@@ -112,11 +116,64 @@ export class ProductList implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: (error) => {
-          console.error('Error loading paginated products:', error);
-          // Fallback to getAllProducts
-          this.loadAllProducts();
+          console.error('Error loading products:', error);
+          this.isLoading = false;
+          this.showSkeleton = false;
+          this.error = 'Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.';
+          
+          // Load sample data khi API lỗi
+          this.loadSampleProducts();
+          this.cdr.markForCheck();
         }
       });
+  }
+
+  // Load sample products khi API lỗi
+  private loadSampleProducts() {
+    console.log('Loading sample products...');
+    const sampleProducts: ProductWithExtras[] = [
+      {
+        id: 1,
+        name: 'iPhone 15 Pro',
+        description: 'Điện thoại thông minh cao cấp',
+        price: 25000000,
+        imageUrl: 'https://via.placeholder.com/300x300?text=iPhone+15+Pro',
+        stock: 50,
+        sku: 'SKU-001',
+        category: 'Điện thoại',
+        status: 'active',
+        createdAt: new Date()
+      },
+      {
+        id: 2,
+        name: 'Samsung Galaxy S24',
+        description: 'Điện thoại Android flagship',
+        price: 22000000,
+        imageUrl: 'https://via.placeholder.com/300x300?text=Galaxy+S24',
+        stock: 30,
+        sku: 'SKU-002',
+        category: 'Điện thoại',
+        status: 'active',
+        createdAt: new Date()
+      },
+      {
+        id: 3,
+        name: 'MacBook Pro M3',
+        description: 'Laptop cao cấp cho công việc',
+        price: 45000000,
+        imageUrl: 'https://via.placeholder.com/300x300?text=MacBook+Pro',
+        stock: 15,
+        sku: 'SKU-003',
+        category: 'Laptop',
+        status: 'active',
+        createdAt: new Date()
+      }
+    ];
+    
+    this.products = sampleProducts;
+    this.filteredProducts = [...this.products];
+    this.totalPages = Math.ceil(this.products.length / this.itemsPerPage);
+    this.cdr.markForCheck();
   }
 
   // Fallback method để load tất cả sản phẩm
@@ -324,6 +381,65 @@ export class ProductList implements OnInit, OnDestroy {
     event.target.src = 'https://via.placeholder.com/100x100?text=No+Image';
   }
 
+  // Trigger file input
+  triggerFileInput(event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    const fileInput = document.getElementById('productImage') as HTMLInputElement;
+    if (fileInput) {
+      fileInput.click();
+    }
+  }
+
+  // Xử lý khi chọn file ảnh
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+      
+      // Validate file
+      if (!file.type.startsWith('image/')) {
+        alert('Vui lòng chọn file ảnh hợp lệ!');
+        return;
+      }
+      
+      if (file.size > 5 * 1024 * 1024) { // 5MB
+        alert('Kích thước file không được vượt quá 5MB!');
+        return;
+      }
+      
+      this.selectedFile = file;
+      
+      // Tạo preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        this.selectedProduct.imageUrl = e.target?.result as string;
+        this.cdr.markForCheck();
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Xóa hình ảnh
+  removeImage(event: Event): void {
+    event.stopPropagation();
+    this.selectedProduct.imageUrl = '';
+    this.selectedFile = null;
+    this.cdr.markForCheck();
+  }
+
+  // Format kích thước file
+  formatFileSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  }
+
   // Format tiền tệ theo định dạng Việt Nam
   formatCurrency(price: number): string {
     return new Intl.NumberFormat('vi-VN', {
@@ -357,9 +473,11 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Mở modal thêm sản phẩm mới
   openAddProductModal() {
+    console.log('Add product clicked');
     this.isEditing = false;
     this.selectedProduct = this.getEmptyProduct();
     this.showModal = true;
+    console.log('Modal opened, selectedProduct:', this.selectedProduct);
   }
 
   // Mở modal chỉnh sửa sản phẩm
@@ -396,7 +514,18 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Lưu sản phẩm (thêm mới hoặc cập nhật)
   saveProduct() {
-    // Chuẩn bị dữ liệu sản phẩm để gửi lên server
+    console.log('Save product called:', {
+      hasFile: !!this.selectedFile,
+      imageUrl: this.selectedProduct.imageUrl,
+      productName: this.selectedProduct.name
+    });
+
+    // Tạm thời bỏ qua upload, lưu trực tiếp với Base64 URL
+    this.saveProductData();
+  }
+
+  // Hàm riêng để lưu product sau khi có imageUrl
+  private saveProductData() {
     const productData = {
       name: this.selectedProduct.name,
       description: this.selectedProduct.description,
@@ -404,6 +533,9 @@ export class ProductList implements OnInit, OnDestroy {
       imageUrl: this.selectedProduct.imageUrl,
       stock: this.selectedProduct.stock
     };
+
+    console.log('Saving product data:', productData);
+    console.log('Is editing:', this.isEditing);
 
     if (this.isEditing) {
       // Cập nhật sản phẩm hiện có
@@ -415,6 +547,7 @@ export class ProductList implements OnInit, OnDestroy {
             this.products[index] = { ...this.products[index], ...productData };
           }
           this.filterProducts(); // Cập nhật danh sách đã lọc
+          alert('Cập nhật sản phẩm thành công!');
           this.closeModal();
           this.cdr.markForCheck();
         },
@@ -425,8 +558,10 @@ export class ProductList implements OnInit, OnDestroy {
       });
     } else {
       // Thêm sản phẩm mới
+      console.log('Creating new product...');
       this.productService.createProduct(productData).subscribe({
         next: (newProduct) => {
+          console.log('Product created successfully:', newProduct);
           // Thêm vào danh sách hiện tại
           const productWithExtras: ProductWithExtras = {
             ...newProduct,
@@ -437,11 +572,17 @@ export class ProductList implements OnInit, OnDestroy {
           };
           this.products.push(productWithExtras);
           this.filterProducts(); // Cập nhật danh sách đã lọc
+          alert('Tạo sản phẩm thành công!');
           this.closeModal();
           this.cdr.markForCheck();
         },
         error: (error) => {
           console.error('Error creating product:', error);
+          console.error('Error details:', {
+            status: error.status,
+            message: error.message,
+            error: error.error
+          });
           alert('Không thể tạo sản phẩm mới. Vui lòng thử lại sau.');
         }
       });
@@ -452,6 +593,7 @@ export class ProductList implements OnInit, OnDestroy {
   closeModal() {
     this.showModal = false;
     this.selectedProduct = this.getEmptyProduct();
+    this.selectedFile = null;
   }
 
   // Quay lại trang Dashboard

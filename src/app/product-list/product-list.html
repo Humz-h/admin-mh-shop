@@ -289,13 +289,59 @@
         </div>
         
         <div class="form-group">
-          <label for="productImage">URL hình ảnh</label>
-          <input 
-            type="url" 
-            id="productImage"
-            [(ngModel)]="selectedProduct.imageUrl" 
-            name="productImage"
-            class="form-input">
+          <label for="productImage">Hình ảnh sản phẩm</label>
+          
+          <!-- Image Upload Area -->
+          <div class="image-upload-area" (click)="triggerFileInput()" [class.has-image]="selectedProduct.imageUrl">
+            <input 
+              type="file" 
+              id="productImage"
+              accept="image/*"
+              (change)="onFileSelected($event)"
+              class="file-input"
+              #fileInput>
+            
+            <!-- Upload Placeholder -->
+            <div class="upload-placeholder" *ngIf="!selectedProduct.imageUrl">
+              <div class="upload-icon">
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="7,10 12,15 17,10"></polyline>
+                  <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+              </div>
+              <p class="upload-text">Click để upload ảnh</p>
+            </div>
+            
+            <!-- Image Preview -->
+            <div class="image-preview" *ngIf="selectedProduct.imageUrl">
+              <img 
+                [src]="selectedProduct.imageUrl" 
+                [alt]="selectedProduct.name || 'Preview'"
+                class="preview-image">
+              <div class="image-overlay">
+                <button type="button" class="remove-btn" (click)="removeImage($event)">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+                <button type="button" class="change-btn" (click)="triggerFileInput($event)">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7,10 12,15 17,10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <!-- File Info -->
+          <div class="file-info" *ngIf="selectedFile">
+            <span class="file-name">{{ selectedFile.name }}</span>
+            <span class="file-size">({{ formatFileSize(selectedFile.size) }})</span>
+          </div>
         </div>
         
         <div class="form-group">
