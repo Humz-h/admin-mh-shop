@@ -1,58 +1,105 @@
 <div class="order-management">
   <!-- Header -->
   <div class="page-header">
-    <div class="header-left">
-      <button class="back-btn" (click)="goBack()">
-        <span class="back-icon">←</span>
-        Quay lại
-      </button>
-      <h1 class="page-title">Quản lý đơn hàng</h1>
+    <div class="header-content">
+      <div class="header-left">
+        <button class="back-btn" (click)="goBack()">
+          <span class="back-icon">←</span>
+          Quay lại
+        </button>
+        <div class="title-section">
+          <h1 class="page-title">Quản lý đơn hàng</h1>
+          <p class="page-subtitle">Theo dõi và xử lý đơn hàng của khách hàng</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="refresh-btn" (click)="loadOrders()" [disabled]="loading">
+          <span class="refresh-icon">🔄</span>
+          Làm mới
+        </button>
+      </div>
     </div>
-    <div class="header-right">
-      
-      <button class="refresh-btn" (click)="loadOrders()" [disabled]="loading">
-        <span class="refresh-icon">🔄</span>
-        Làm mới
-      </button>
+  </div>
+
+  <!-- Statistics Cards -->
+  <div class="stats-container" *ngIf="!loading && !error">
+    <div class="stat-card">
+      <div class="stat-icon">📦</div>
+      <div class="stat-content">
+        <h3>{{ orders.length }}</h3>
+        <p>Tổng đơn hàng</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏳</div>
+      <div class="stat-content">
+        <h3>{{ getOrdersByStatus('pending').length }}</h3>
+        <p>Chờ xử lý</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">🚚</div>
+      <div class="stat-content">
+        <h3>{{ getOrdersByStatus('shipped').length }}</h3>
+        <p>Đang giao</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">✅</div>
+      <div class="stat-content">
+        <h3>{{ getOrdersByStatus('delivered').length }}</h3>
+        <p>Đã giao</p>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">💰</div>
+      <div class="stat-content">
+        <h3>{{ formatCurrency(getTotalRevenue()) }}</h3>
+        <p>Tổng doanh thu</p>
+      </div>
     </div>
   </div>
 
   <!-- Filters -->
   <div class="filters-section">
-    <div class="filter-group">
-      <label for="search">Tìm kiếm:</label>
-      <input 
-        type="text" 
-        id="search"
-        [(ngModel)]="searchTerm" 
-        placeholder="Tìm theo mã đơn hàng, tên khách hàng..."
-        class="search-input"
-        (input)="onSearchInput($event)"
-        (keyup.enter)="onSearch()"
-      >
-      <button class="search-btn" (click)="onSearch()">🔍</button>
+    <div class="search-container">
+      <div class="search-box">
+        <input 
+          type="text" 
+          id="search"
+          [(ngModel)]="searchTerm" 
+          placeholder="Tìm theo mã đơn hàng, tên khách hàng..."
+          class="search-input"
+          (input)="onSearchInput($event)"
+          (keyup.enter)="onSearch()"
+        >
+        <span class="search-icon">🔍</span>
+      </div>
     </div>
     
-    <div class="filter-group">
-      <label for="status">Trạng thái:</label>
-      <select 
-        id="status"
-        [(ngModel)]="selectedStatus" 
-        (change)="onStatusChange(selectedStatus)"
-        class="status-select"
-      >
-        <option value="">Tất cả</option>
-        <option value="pending">Chờ xử lý</option>
-        <option value="paid">Đã thanh toán</option>
-        <option value="shipped">Đang giao</option>
-        <option value="delivered">Đã giao</option>
-        <option value="cancelled">Đã hủy</option>
-      </select>
-    </div>
+    <div class="filter-controls">
+      <div class="filter-group">
+        <label for="status">Trạng thái:</label>
+        <select 
+          id="status"
+          [(ngModel)]="selectedStatus" 
+          (change)="onStatusChange(selectedStatus)"
+          class="filter-select"
+        >
+          <option value="">Tất cả</option>
+          <option value="pending">Chờ xử lý</option>
+          <option value="paid">Đã thanh toán</option>
+          <option value="shipped">Đang giao</option>
+          <option value="delivered">Đã giao</option>
+          <option value="cancelled">Đã hủy</option>
+        </select>
+      </div>
 
-    <button class="clear-btn" (click)="clearSearch()">
-      Xóa bộ lọc
-    </button>
+      <button class="clear-btn" (click)="clearSearch()">
+        <span class="clear-icon">🗑️</span>
+        Xóa bộ lọc
+      </button>
+    </div>
   </div>
 
   <!-- Loading State -->
@@ -105,8 +152,8 @@
               <strong>{{ order.orderNumber }}</strong>
             </td>
             <td class="customer-info">
-              <div class="customer-name">{{ order.userName }}</div>
-              <div class="customer-id">ID: {{ order.userId }}</div>
+              <div class="customer-name">{{ order.customerName }}</div>
+              <div class="customer-id">ID: {{ order.customerId }}</div>
             </td>
             <td class="amount">
               <strong>{{ formatCurrency(order.totalAmount) }}</strong>

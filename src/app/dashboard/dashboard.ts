@@ -17,4 +17,8 @@ export class Dashboard {
   navigateToOrders() {
     this.router.navigate(['/orders']);
   }
+
+  navigateToInventories() {
+    this.router.navigate(['/inventories']);
+  }
 }

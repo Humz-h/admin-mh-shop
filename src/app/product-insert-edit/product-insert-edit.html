@@ -1,0 +1,450 @@
+<!-- Product Insert/Edit Modal -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }}</h2>
+      <button class="modal-close" (click)="closeModal()">×</button>
+    </div>
+    
+    <form class="product-form" #productForm="ngForm" (ngSubmit)="onSaveProductClick($event)">
+      <!-- Success/Error Messages -->
+      <div class="form-messages" *ngIf="saveSuccess || saveError">
+        <div class="message success" *ngIf="saveSuccess">
+          <span class="message-icon">✅</span>
+          {{ saveSuccess }}
+        </div>
+        <div class="message error" *ngIf="saveError">
+          <span class="message-icon">❌</span>
+          {{ saveError }}
+        </div>
+      </div>
+      
+      <!-- Modal Body with Two Columns -->
+      <div class="modal-body">
+        <!-- Left Column - Image Upload and QR Code -->
+        <div class="left-column">
+          <!-- Image Upload Section -->
+          <div class="image-section">
+            <label for="productImage">Hình ảnh sản phẩm</label>
+            
+            <!-- Image Upload Area -->
+            <div class="image-upload-area" (click)="triggerFileInput()" [class.has-image]="previewImageUrl || product.imageUrl">
+              <input 
+                type="file" 
+                id="productImage"
+                accept="image/*"
+                (change)="onFileSelected($event)"
+                class="file-input"
+                #fileInput>
+              
+              <!-- Upload Placeholder -->
+              <div class="upload-placeholder" *ngIf="!previewImageUrl && !product.imageUrl">
+                <div class="upload-icon">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7,10 12,15 17,10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                </div>
+                <p class="upload-text">Click để upload ảnh</p>
+                <p class="upload-specs">Ảnh phải có tỷ lệ vuông (1:1)<br>
+                Kích thước tối thiểu: 400x400px<br>
+                Khuyến nghị: 800x800px<br>
+                Dung lượng tối đa: 2MB</p>
+              </div>
+              
+              <!-- Image Preview -->
+              <div class="image-preview" *ngIf="previewImageUrl || product.imageUrl">
+                <img 
+                  [src]="previewImageUrl || product.imageUrl" 
+                  [alt]="product.name || 'Preview'"
+                  class="preview-image">
+                <div class="image-overlay">
+                  <button type="button" class="remove-btn" (click)="removeImage($event)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <line x1="18" y1="6" x2="6" y2="18"></line>
+                      <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                  </button>
+                  <button type="button" class="change-btn" (click)="triggerFileInput($event)">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                      <polyline points="7,10 12,15 17,10"></polyline>
+                      <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- File Info -->
+            <div class="file-info" *ngIf="selectedFile">
+              <span class="file-name">{{ selectedFile.name }}</span>
+              <span class="file-size">({{ formatFileSize(selectedFile.size) }})</span>
+            </div>
+            
+            <!-- Upload Button -->
+            <div class="upload-actions" *ngIf="selectedFile">
+              <button 
+                type="button" 
+                class="btn btn-primary btn-upload" 
+                (click)="uploadImage()"
+                [disabled]="isUploading">
+                <span *ngIf="isUploading" class="loading-spinner-small"></span>
+                {{ isUploading ? 'Đang upload...' : 'Tải ảnh lên' }}
+              </button>
+            </div>
+            
+            <!-- Upload Status -->
+            <div class="upload-status" *ngIf="uploadError">
+              <div class="message error">
+                <span class="message-icon">❌</span>
+                {{ uploadError }}
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right Column - Product Form -->
+        <div class="right-column">
+      
+      <!-- Basic Product Information -->
+      <div class="form-section">
+        <h3 class="section-title">Thông tin cơ bản</h3>
+        
+        <!-- Row 1: Tên sản phẩm -->
+        <div class="form-row-single">
+          <div class="form-group">
+            <label for="productName">Tên sản phẩm *</label>
+            <input 
+              type="text" 
+              id="productName"
+              [(ngModel)]="product.name" 
+              name="productName"
+              required
+              minlength="2"
+              class="form-input"
+              placeholder="Nhập tên sản phẩm"
+              (input)="generateProductCodeFromName()"
+              [class.error]="productForm.controls['productName']?.invalid && productForm.controls['productName']?.touched">
+            <div class="field-error" *ngIf="productForm.controls['productName']?.invalid && productForm.controls['productName']?.touched">
+              <span *ngIf="productForm.controls['productName']?.errors?.['required']">Tên sản phẩm là bắt buộc</span>
+              <span *ngIf="productForm.controls['productName']?.errors?.['minlength']">Tên sản phẩm phải có ít nhất 2 ký tự</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Row 2: Nhóm sản phẩm, Mã sản phẩm, Danh mục -->
+        <div class="form-row-triple">
+          <div class="form-group">
+            <label for="productGroup">Nhóm sản phẩm</label>
+            <input 
+              type="text" 
+              id="productGroup"
+              [(ngModel)]="product.productGroup" 
+              name="productGroup"
+              class="form-input"
+              placeholder="Nhập nhóm sản phẩm">
+          </div>
+          <div class="form-group">
+            <label for="productCode">Mã sản phẩm</label>
+            <input 
+              type="text" 
+              id="productCode"
+              [(ngModel)]="product.productCode" 
+              name="productCode"
+              readonly
+              class="form-input readonly-input"
+              placeholder="Tự động sinh từ tên sản phẩm">
+          </div>
+          <div class="form-group">
+            <label for="productCategory">Danh mục *</label>
+            <select 
+              id="productCategory"
+              [(ngModel)]="product.category" 
+              name="productCategory"
+              required
+              class="form-select">
+              <option value="">Chọn danh mục</option>
+              <option value="Điện tử">Điện tử</option>
+              <option value="Điện gia dụng">Điện gia dụng</option>
+              <option value="Thời trang">Thời trang</option>
+              <option value="Sách">Sách</option>
+              <option value="Gia dụng">Gia dụng</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Row 3: Giá gốc, Phần trăm khuyến mãi, Giá bán -->
+        <div class="form-row-triple">
+          <div class="form-group">
+            <label for="originalPrice">Giá gốc (VND)</label>
+            <input 
+              type="number" 
+              id="originalPrice"
+              [(ngModel)]="product.originalPrice" 
+              name="originalPrice"
+              min="0"
+              class="form-input"
+              placeholder="Nhập giá gốc"
+              (input)="calculateSalePrice()">
+          </div>
+          <div class="form-group">
+            <label for="discountPercentage">Phần trăm khuyến mãi (%)</label>
+            <input 
+              type="number" 
+              id="discountPercentage"
+              [(ngModel)]="discountPercentage" 
+              name="discountPercentage"
+              min="0"
+              max="100"
+              step="0.01"
+              class="form-input"
+              placeholder="Nhập % khuyến mãi"
+              (input)="calculateSalePrice()">
+          </div>
+          <div class="form-group">
+            <label for="productPrice">Giá bán (VND) *</label>
+            <input 
+              type="number" 
+              id="productPrice"
+              [(ngModel)]="product.price" 
+              name="productPrice"
+              required
+              min="1"
+              readonly
+              class="form-input readonly-input"
+              placeholder="Tự động tính">
+            <div class="field-error" *ngIf="productForm.controls['productPrice']?.invalid && productForm.controls['productPrice']?.touched">
+              <span *ngIf="productForm.controls['productPrice']?.errors?.['required']">Giá sản phẩm là bắt buộc</span>
+              <span *ngIf="productForm.controls['productPrice']?.errors?.['min']">Giá phải lớn hơn 0</span>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Row 4: Tồn kho và Trạng thái -->
+        <div class="form-row">
+          <div class="form-group">
+            <label for="productStock">Tồn kho *</label>
+            <input 
+              type="number" 
+              id="productStock"
+              [(ngModel)]="product.stock" 
+              name="productStock"
+              required
+              min="0"
+              class="form-input"
+              placeholder="Nhập số lượng tồn kho"
+              [class.error]="productForm.controls['productStock']?.invalid && productForm.controls['productStock']?.touched">
+            <div class="field-error" *ngIf="productForm.controls['productStock']?.invalid && productForm.controls['productStock']?.touched">
+              <span *ngIf="productForm.controls['productStock']?.errors?.['required']">Số lượng tồn kho là bắt buộc</span>
+              <span *ngIf="productForm.controls['productStock']?.errors?.['min']">Số lượng không được âm</span>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="productStatus">Trạng thái *</label>
+            <select 
+              id="productStatus"
+              [(ngModel)]="product.status" 
+              name="productStatus"
+              required
+              class="form-select">
+              <option [value]="true">Hoạt động</option>
+              <option [value]="false">Không hoạt động</option>
+            </select>
+          </div>
+        </div>
+        
+        <!-- Row 5: Mô tả sản phẩm -->
+        <div class="form-row-single">
+          <div class="form-group">
+            <label for="productDescription">Mô tả sản phẩm</label>
+            <textarea 
+              id="productDescription"
+              [(ngModel)]="product.description" 
+              name="productDescription"
+              rows="3"
+              class="form-textarea"
+              placeholder="Nhập mô tả chi tiết về sản phẩm"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Details Section -->
+      <div class="form-section">
+        <div class="section-header">
+          <h3 class="section-title">Chi tiết sản phẩm</h3>
+          <button type="button" class="btn btn-small btn-primary" (click)="addProductDetail()">
+            + Thêm chi tiết
+          </button>
+        </div>
+        
+        <div class="details-container" *ngFor="let detail of productDetails; let i = index; trackBy: trackByIndex">
+          <div class="detail-item">
+            <div class="detail-header">
+              <h4>Chi tiết {{ i + 1 }}</h4>
+              <button type="button" class="btn-remove" (click)="removeProductDetail(i)" *ngIf="productDetails.length > 1">
+                🗑️
+              </button>
+            </div>
+            
+            <!-- Row 1: Thương hiệu và Xuất xứ -->
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'brand_' + i">Thương hiệu</label>
+                <input 
+                  type="text" 
+                  [id]="'brand_' + i"
+                  [(ngModel)]="detail.brand" 
+                  [name]="'brand_' + i"
+                  class="form-input"
+                  placeholder="Nhập thương hiệu">
+              </div>
+              <div class="form-group">
+                <label [for]="'origin_' + i">Xuất xứ</label>
+                <input 
+                  type="text" 
+                  [id]="'origin_' + i"
+                  [(ngModel)]="detail.origin" 
+                  [name]="'origin_' + i"
+                  class="form-input"
+                  placeholder="Nhập xuất xứ">
+              </div>
+            </div>
+            
+            <!-- Row 2: Bảo hành và Thông số kỹ thuật -->
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'warranty_' + i">Bảo hành</label>
+                <input 
+                  type="text" 
+                  [id]="'warranty_' + i"
+                  [(ngModel)]="detail.warranty" 
+                  [name]="'warranty_' + i"
+                  class="form-input"
+                  placeholder="Ví dụ: 12 tháng">
+              </div>
+              <div class="form-group">
+                <label [for]="'specifications_' + i">Thông số kỹ thuật</label>
+                <textarea 
+                  [id]="'specifications_' + i"
+                  [(ngModel)]="detail.specifications" 
+                  [name]="'specifications_' + i"
+                  rows="2"
+                  class="form-textarea"
+                  placeholder="Nhập thông số kỹ thuật"></textarea>
+              </div>
+            </div>
+            
+            <!-- Row 3: Tính năng và Thông tin bổ sung -->
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'features_' + i">Tính năng</label>
+                <textarea 
+                  [id]="'features_' + i"
+                  [(ngModel)]="detail.features" 
+                  [name]="'features_' + i"
+                  rows="2"
+                  class="form-textarea"
+                  placeholder="Nhập các tính năng nổi bật"></textarea>
+              </div>
+              <div class="form-group">
+                <label [for]="'additionalInfo_' + i">Thông tin bổ sung</label>
+                <textarea 
+                  [id]="'additionalInfo_' + i"
+                  [(ngModel)]="detail.additionalInfo" 
+                  [name]="'additionalInfo_' + i"
+                  rows="2"
+                  class="form-textarea"
+                  placeholder="Thông tin khác"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Product Variants Section -->
+      <div class="form-section">
+        <div class="section-header">
+          <h3 class="section-title">Biến thể sản phẩm</h3>
+          <button type="button" class="btn btn-small btn-primary" (click)="addProductVariant()">
+            + Thêm biến thể
+          </button>
+        </div>
+        
+        <div class="variants-container" *ngFor="let variant of productVariants; let i = index; trackBy: trackByIndex">
+          <div class="variant-item">
+            <div class="variant-header">
+              <h4>Biến thể {{ i + 1 }}</h4>
+              <button type="button" class="btn-remove" (click)="removeProductVariant(i)" *ngIf="productVariants.length > 1">
+                🗑️
+              </button>
+            </div>
+            
+            <!-- Row 1: Tên biến thể và Thuộc tính -->
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'variantName_' + i">Tên biến thể</label>
+                <input 
+                  type="text" 
+                  [id]="'variantName_' + i"
+                  [(ngModel)]="variant.variantName" 
+                  [name]="'variantName_' + i"
+                  class="form-input"
+                  placeholder="Ví dụ: Màu đỏ, Size L">
+              </div>
+              <div class="form-group">
+                <label [for]="'variantAttributes_' + i">Thuộc tính</label>
+                <input 
+                  type="text" 
+                  [id]="'variantAttributes_' + i"
+                  [(ngModel)]="variant.attributes" 
+                  [name]="'variantAttributes_' + i"
+                  class="form-input"
+                  placeholder="Ví dụ: Color: Red, Size: L">
+              </div>
+            </div>
+            
+            <!-- Row 2: Giá biến thể và SKU biến thể -->
+            <div class="form-row">
+              <div class="form-group">
+                <label [for]="'variantPrice_' + i">Giá biến thể</label>
+                <input 
+                  type="number" 
+                  [id]="'variantPrice_' + i"
+                  [(ngModel)]="variant.price" 
+                  [name]="'variantPrice_' + i"
+                  min="0"
+                  class="form-input"
+                  placeholder="Giá cho biến thể này">
+              </div>
+              <div class="form-group">
+                <label [for]="'variantSku_' + i">SKU biến thể</label>
+                <input 
+                  type="text" 
+                  [id]="'variantSku_' + i"
+                  [(ngModel)]="variant.sku" 
+                  [name]="'variantSku_' + i"
+                  class="form-input"
+                  placeholder="SKU cho biến thể">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="isSaving">
+          Hủy
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving || !productForm.valid">
+          <span *ngIf="isSaving" class="loading-spinner-small"></span>
+          {{ isSaving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Thêm mới') }}
+        </button>
+      </div>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>

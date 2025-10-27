@@ -15,8 +15,8 @@ export interface OrderItem {
 export interface Order {
   id: number;
   orderNumber: string;
-  userId: number;
-  userName: string;
+  customerId: number;
+  customerName: string;
   totalAmount: number;
   shippingFee: number;
   discountAmount: number;
@@ -44,8 +44,8 @@ export class OrderService {
   constructor(private http: HttpClient) { }
 
   // Lấy tất cả đơn hàng với pagination
-  getOrders(page: number = 1, pageSize: number = 20, userId?: number): Observable<Order[]> {
-    const cacheKey = `orders_page_${page}_pageSize_${pageSize}_userId_${userId || 'all'}`;
+  getOrders(page: number = 1, pageSize: number = 20, customerId?: number): Observable<Order[]> {
+    const cacheKey = `orders_page_${page}_pageSize_${pageSize}_customerId_${customerId || 'all'}`;
     const cached = this.getCachedData(cacheKey);
     
     if (cached) {
@@ -61,8 +61,8 @@ export class OrderService {
       .set('page', page.toString())
       .set('pageSize', pageSize.toString());
     
-    if (userId) {
-      params = params.set('userId', userId.toString());
+    if (customerId) {
+      params = params.set('customerId', customerId.toString());
     }
 
     const request$ = this.http.get<Order[]>(this.apiUrl, { params }).pipe(

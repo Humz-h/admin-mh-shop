@@ -112,8 +112,8 @@ export class OrderList implements OnInit, OnDestroy {
       {
         id: 1,
         orderNumber: 'ORD-0001',
-        userId: 21,
-        userName: 'hung',
+        customerId: 21,
+        customerName: 'hung',
         totalAmount: 1500000,
         shippingFee: 30000,
         discountAmount: 0,
@@ -124,8 +124,8 @@ export class OrderList implements OnInit, OnDestroy {
       {
         id: 2,
         orderNumber: 'ORD-0002',
-        userId: 21,
-        userName: 'hung',
+        customerId: 21,
+        customerName: 'hung',
         totalAmount: 2500000,
         shippingFee: 50000,
         discountAmount: 200000,
@@ -136,8 +136,8 @@ export class OrderList implements OnInit, OnDestroy {
       {
         id: 3,
         orderNumber: 'ORD-0003',
-        userId: 22,
-        userName: 'minh',
+        customerId: 22,
+        customerName: 'minh',
         totalAmount: 800000,
         shippingFee: 20000,
         discountAmount: 50000,
@@ -148,8 +148,8 @@ export class OrderList implements OnInit, OnDestroy {
       {
         id: 4,
         orderNumber: 'ORD-0004',
-        userId: 23,
-        userName: 'lan',
+        customerId: 23,
+        customerName: 'lan',
         totalAmount: 3200000,
         shippingFee: 40000,
         discountAmount: 0,
@@ -160,8 +160,8 @@ export class OrderList implements OnInit, OnDestroy {
       {
         id: 5,
         orderNumber: 'ORD-0005',
-        userId: 24,
-        userName: 'tuan',
+        customerId: 24,
+        customerName: 'tuan',
         totalAmount: 1200000,
         shippingFee: 25000,
         discountAmount: 100000,
@@ -275,5 +275,17 @@ export class OrderList implements OnInit, OnDestroy {
   // Làm mới dữ liệu (force reload)
   refreshOrders(): void {
     this.loadOrders();
+  }
+
+  // Lấy danh sách đơn hàng theo trạng thái
+  getOrdersByStatus(status: string): Order[] {
+    return this.orders.filter(order => order.status === status);
+  }
+
+  // Tính tổng doanh thu
+  getTotalRevenue(): number {
+    return this.orders
+      .filter(order => order.status === 'delivered' || order.status === 'paid')
+      .reduce((total, order) => total + order.totalAmount, 0);
   }
 }

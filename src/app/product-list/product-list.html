@@ -7,7 +7,7 @@
   </div>
 
   <!-- Header Section -->
-  <div class="page-header">
+  <div class="page-header floating">
     <div class="header-content">
       <h1 class="page-title">Quản lý sản phẩm</h1>
       <p class="page-subtitle">Quản lý danh sách sản phẩm trong hệ thống</p>
@@ -17,15 +17,15 @@
         <span class="btn-icon">🔄</span>
         Làm mới
       </button>
-      <button class="btn btn-primary" (click)="openAddProductModal()">
-        <span class="btn-icon">+</span>
-        Thêm sản phẩm
-      </button>
+        <button class="btn btn-primary glow" (click)="openAddProductModal()">
+          <span class="btn-icon">+</span>
+          Thêm sản phẩm
+        </button>
     </div>
   </div>
 
   <!-- Filters and Search -->
-  <div class="filters-section">
+  <div class="filters-section pulse">
     <div class="search-box">
       <input 
         type="text" 
@@ -36,13 +36,14 @@
       <span class="search-icon">🔍</span>
     </div>
     <div class="filter-controls">
-      <select [(ngModel)]="selectedCategory" (change)="filterProducts()" class="filter-select">
-        <option value="">Tất cả danh mục</option>
-        <option value="electronics">Điện tử</option>
-        <option value="clothing">Thời trang</option>
-        <option value="books">Sách</option>
-        <option value="home">Gia dụng</option>
-      </select>
+            <select [(ngModel)]="selectedCategory" (change)="filterProducts()" class="filter-select">
+              <option value="">Tất cả danh mục</option>
+              <option value="Điện tử">Điện tử</option>
+              <option value="Điện gia dụng">Điện gia dụng</option>
+              <option value="Thời trang">Thời trang</option>
+              <option value="Sách">Sách</option>
+              <option value="Gia dụng">Gia dụng</option>
+            </select>
       <select [(ngModel)]="sortBy" (change)="sortProducts()" class="filter-select">
         <option value="name">Sắp xếp theo tên</option>
         <option value="price">Sắp xếp theo giá</option>
@@ -62,14 +63,13 @@
   <div class="skeleton-container" *ngIf="showSkeleton">
     <div class="skeleton-table">
       <div class="skeleton-header">
-        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7,8]"></div>
+        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7]"></div>
       </div>
       <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
         <div class="skeleton-cell skeleton-image"></div>
         <div class="skeleton-cell skeleton-text"></div>
         <div class="skeleton-cell skeleton-badge"></div>
         <div class="skeleton-cell skeleton-price"></div>
-        <div class="skeleton-cell skeleton-stock"></div>
         <div class="skeleton-cell skeleton-badge"></div>
         <div class="skeleton-cell skeleton-date"></div>
         <div class="skeleton-cell skeleton-actions"></div>
@@ -95,7 +95,6 @@
           <th>Tên sản phẩm</th>
           <th>Danh mục</th>
           <th>Giá</th>
-          <th>Tồn kho</th>
           <th>Trạng thái</th>
           <th>Ngày tạo</th>
           <th>Thao tác</th>
@@ -125,13 +124,8 @@
           <td class="product-price">
             <span class="price">{{ formatCurrency(product.price) }}</span>
           </td>
-          <td class="product-stock">
-            <span class="stock" [class]="product.stock < 10 ? 'low-stock' : 'normal-stock'">
-              {{ product.stock }}
-            </span>
-          </td>
           <td class="product-status">
-            <span class="status-badge" [class]="product.status">
+            <span class="status-badge" [class.active]="product.status" [class.inactive]="!product.status">
               {{ getStatusText(product.status) }}
             </span>
           </td>
@@ -201,168 +195,10 @@
   </div>
 
   <!-- Add/Edit Product Modal -->
-  <div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-    <div class="modal-content" (click)="$event.stopPropagation()">
-      <div class="modal-header">
-        <h2>{{ isEditing ? 'Chỉnh sửa sản phẩm' : 'Thêm sản phẩm mới' }}</h2>
-        <button class="modal-close" (click)="closeModal()">×</button>
-      </div>
-      
-      <form class="product-form" (ngSubmit)="saveProduct()" #productForm="ngForm">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="productName">Tên sản phẩm *</label>
-            <input 
-              type="text" 
-              id="productName"
-              [(ngModel)]="selectedProduct.name" 
-              name="productName"
-              required
-              class="form-input">
-          </div>
-          <div class="form-group">
-            <label for="productSku">SKU *</label>
-            <input 
-              type="text" 
-              id="productSku"
-              [(ngModel)]="selectedProduct.sku" 
-              name="productSku"
-              required
-              class="form-input">
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="productCategory">Danh mục *</label>
-            <select 
-              id="productCategory"
-              [(ngModel)]="selectedProduct.category" 
-              name="productCategory"
-              required
-              class="form-select">
-              <option value="">Chọn danh mục</option>
-              <option value="electronics">Điện tử</option>
-              <option value="clothing">Thời trang</option>
-              <option value="books">Sách</option>
-              <option value="home">Gia dụng</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="productPrice">Giá (VND) *</label>
-            <input 
-              type="number" 
-              id="productPrice"
-              [(ngModel)]="selectedProduct.price" 
-              name="productPrice"
-              required
-              min="0"
-              class="form-input">
-          </div>
-        </div>
-        
-        <div class="form-row">
-          <div class="form-group">
-            <label for="productStock">Tồn kho *</label>
-            <input 
-              type="number" 
-              id="productStock"
-              [(ngModel)]="selectedProduct.stock" 
-              name="productStock"
-              required
-              min="0"
-              class="form-input">
-          </div>
-          <div class="form-group">
-            <label for="productStatus">Trạng thái *</label>
-            <select 
-              id="productStatus"
-              [(ngModel)]="selectedProduct.status" 
-              name="productStatus"
-              required
-              class="form-select">
-              <option value="active">Hoạt động</option>
-              <option value="inactive">Không hoạt động</option>
-              <option value="draft">Bản nháp</option>
-            </select>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="productImage">Hình ảnh sản phẩm</label>
-          
-          <!-- Image Upload Area -->
-          <div class="image-upload-area" (click)="triggerFileInput()" [class.has-image]="selectedProduct.imageUrl">
-            <input 
-              type="file" 
-              id="productImage"
-              accept="image/*"
-              (change)="onFileSelected($event)"
-              class="file-input"
-              #fileInput>
-            
-            <!-- Upload Placeholder -->
-            <div class="upload-placeholder" *ngIf="!selectedProduct.imageUrl">
-              <div class="upload-icon">
-                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7,10 12,15 17,10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-              </div>
-              <p class="upload-text">Click để upload ảnh</p>
-            </div>
-            
-            <!-- Image Preview -->
-            <div class="image-preview" *ngIf="selectedProduct.imageUrl">
-              <img 
-                [src]="selectedProduct.imageUrl" 
-                [alt]="selectedProduct.name || 'Preview'"
-                class="preview-image">
-              <div class="image-overlay">
-                <button type="button" class="remove-btn" (click)="removeImage($event)">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-                <button type="button" class="change-btn" (click)="triggerFileInput($event)">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7,10 12,15 17,10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                </button>
-              </div>
-            </div>
-          </div>
-          
-          <!-- File Info -->
-          <div class="file-info" *ngIf="selectedFile">
-            <span class="file-name">{{ selectedFile.name }}</span>
-            <span class="file-size">({{ formatFileSize(selectedFile.size) }})</span>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="productDescription">Mô tả</label>
-          <textarea 
-            id="productDescription"
-            [(ngModel)]="selectedProduct.description" 
-            name="productDescription"
-            rows="4"
-            class="form-textarea"></textarea>
-        </div>
-        
-        <div class="form-actions">
-          <button type="button" class="btn btn-secondary" (click)="closeModal()">
-            Hủy
-          </button>
-          <button type="submit" class="btn btn-primary" [disabled]="!productForm.valid">
-            {{ isEditing ? 'Cập nhật' : 'Thêm mới' }}
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
+  <app-product-insert-edit 
+    [showModal]="showModal"
+    [isEditing]="isEditing"
+    [selectedProduct]="selectedProduct"
+    (modalClosed)="closeModal()"
+    (productSaved)="onProductSaved($event)">
+  </app-product-insert-edit>

@@ -3,24 +3,29 @@
   <header class="header">
     <div class="header-left">
       <div class="logo">
-        <span class="logo-text">TRADEKEY<sup>®</sup></span>
-        <span class="logo-tagline">Your Key To Global Trade</span>
+        <span class="logo-text">MH Store</span>
+        <span class="logo-tagline">Quản lý cửa hàng điện tử</span>
       </div>
     </div>
     <div class="header-center">
-      <div class="header-icons">
-        <div class="hamburger-menu">☰</div>
-        <div class="user-icon">👤</div>
+      <div class="search-container">
+        <div class="search-icon">🔍</div>
+        <input type="text" placeholder="Tìm kiếm sản phẩm, đơn hàng..." class="search-input">
       </div>
     </div>
     <div class="header-right">
       <div class="header-actions">
-        <div class="icon">🔍</div>
-        <div class="icon">🏳️</div>
-        <div class="icon">⛶</div>
-        <div class="icon">⊞</div>
-        <div class="icon">🔔</div>
-        <div class="icon">👤</div>
+        <button class="action-btn notification">
+          <span class="icon">🔔</span>
+          <span class="badge">3</span>
+        </button>
+        <button class="action-btn settings">
+          <span class="icon">⚙️</span>
+        </button>
+        <div class="user-profile-mini">
+          <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiM0MDk2RkYiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik0xMiAxMkMxNC4yMDkxIDEyIDE2IDEwLjIwOTEgMTYgOEMxNiA1Ljc5MDg2IDE0LjIwOTEgNCAxMiA0QzkuNzkwODYgNCA4IDUuNzkwODYgOCA4QzggMTAuMjA5MSA5Ljc5MDg2IDEyIDEyIDEyWiIgZmlsbD0id2hpdGUiLz4KPHBhdGggZD0iTTEyIDE0QzguNjkxMTYgMTQgNiAxNi42OTExNiA2IDIwSDhDMTAgMTggMTAgMTYgMTIgMTZIMTJDMTQgMTYgMTQgMTggMTYgMjBIMThDMTggMTYuNjkxMTYgMTUuMzA4OCAxNCAxMiAxNFoiIGZpbGw9IndoaXRlIi8+Cjwvc3ZnPgo8L3N2Zz4K" alt="Profile">
+          <span class="user-name">Admin</span>
+        </div>
       </div>
     </div>
   </header>
@@ -86,31 +91,78 @@
 
     <!-- Main Content -->
     <main class="main-content">
-      <div class="content-header">
-        <h1 class="page-title">Danh mục hàng hóa</h1>
-        <div class="title-underline"></div>
+      <!-- Welcome Section -->
+      <div class="welcome-section">
+        <div class="welcome-content">
+          <h1 class="welcome-title">Chào mừng đến với MH Store</h1>
+          <p class="welcome-subtitle">Quản lý cửa hàng điện tử một cách hiệu quả</p>
+        </div>
+        
       </div>
-      
-      <div class="content-grid">
-        <div class="content-card" (click)="navigateToProducts()">
-          <div class="card-icon">🔺</div>
-          <h3>DANH MỤC SẢN PHẨM</h3>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <h2 class="section-title">Thao tác nhanh</h2>
+        <div class="actions-grid">
+          <button class="action-card primary" (click)="navigateToProducts()">
+            <div class="action-icon">📦</div>
+            <div class="action-content">
+              <h3>Quản lý sản phẩm</h3>
+              <p>Thêm, sửa, xóa sản phẩm</p>
+            </div>
+            <div class="action-arrow">→</div>
+          </button>
+
+          <button class="action-card success" (click)="navigateToOrders()">
+            <div class="action-icon">💰</div>
+            <div class="action-content">
+              <h3>Đơn hàng</h3>
+              <p>Xem và xử lý đơn hàng</p>
+            </div>
+            <div class="action-arrow">→</div>
+          </button>
+
+          <button class="action-card warning" (click)="navigateToInventories()">
+            <div class="action-icon">📊</div>
+            <div class="action-content">
+              <h3>Tồn kho</h3>
+              <p>Quản lý kho hàng</p>
+            </div>
+            <div class="action-arrow">→</div>
+          </button>
+
+          <button class="action-card info">
+            <div class="action-icon">📈</div>
+            <div class="action-content">
+              <h3>Báo cáo bán hàng</h3>
+              <p>Thống kê doanh thu</p>
+            </div>
+            <div class="action-arrow">→</div>
+          </button>
         </div>
-        <div class="content-card" (click)="navigateToOrders()">
-          <div class="card-icon">💰</div>
-          <h3>ĐƠN HÀNG</h3>
-        </div>
-        <div class="content-card">
-          <div class="card-icon">🏠</div>
-          <h3>TỒN KHO</h3>
-        </div>
-        <div class="content-card">
-          <div class="card-icon">💹</div>
-          <h3>QUẢN LÝ GIÁ ĐỘNG</h3>
-        </div>
-        <div class="content-card">
-          <div class="card-icon">⊞</div>
-          <h3>QUẢN LÝ PANEL</h3>
+      </div>
+
+      <!-- Management Tools -->
+      <div class="management-section">
+        <h2 class="section-title">Công cụ quản lý</h2>
+        <div class="tools-grid">
+          <div class="tool-card">
+            <div class="tool-icon">⚙️</div>
+            <h3>Cài đặt hệ thống</h3>
+            <p>Tùy chỉnh cấu hình</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-icon">👥</div>
+            <h3>Quản lý người dùng</h3>
+            <p>Phân quyền và tài khoản</p>
+          </div>
+
+          <div class="tool-card">
+            <div class="tool-icon">📋</div>
+            <h3>Báo cáo chi tiết</h3>
+            <p>Phân tích dữ liệu</p>
+          </div>
         </div>
       </div>
     </main>

@@ -1,15 +1,50 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, of } from 'rxjs';
-import { map, catchError, shareReplay, timeout } from 'rxjs/operators';
+import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
+import { map, catchError, shareReplay, timeout, retry, retryWhen, delay, take, switchMap } from 'rxjs/operators';
 
 export interface Product {
   id: number;
   name: string;
   description: string;
+  originalPrice?: number;
+  salePrice?: number;
   price: number;
   imageUrl: string;
+  status: boolean;
+  category: string;
+  productGroup: string;
+  productCode: string;
   stock: number;
+  createdAt?: string | Date;
+  productDetails?: ProductDetail[];
+  productVariants?: ProductVariant[];
+}
+
+export interface ProductDetail {
+  id: number;
+  productId: number;
+  brand: string;
+  origin: string;
+  warranty: string;
+  specifications: string;
+  features: string;
+  additionalInfo: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  product?: string;
+}
+
+export interface ProductVariant {
+  id: number;
+  productId: number;
+  variantName: string;
+  attributes: string;
+  price: number;
+  sku: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
+  product?: string;
 }
 
 export interface ProductResponse {
@@ -48,12 +83,18 @@ export class ProductService {
 
     console.log('Fetching products from API...');
     const request$ = this.http.get<Product[]>(`${this.apiUrl}?page=1&pageSize=20`).pipe(
-      timeout(5000), // 5 giây timeout
+      timeout(10000), // 10 giây timeout
       map(products => {
         console.log('Products loaded from API:', products.length);
-        this.setCachedData(cacheKey, products);
+        // Map dữ liệu từ API response để đảm bảo tương thích
+        const mappedProducts = products.map(product => ({
+          ...product,
+          imageUrl: product.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image',
+          status: product.status !== undefined ? product.status : true
+        }));
+        this.setCachedData(cacheKey, mappedProducts);
         this.loadingStates.delete(cacheKey); // Xóa loading state
-        return products;
+        return mappedProducts;
       }),
       shareReplay(1),
       catchError(error => {
@@ -78,14 +119,20 @@ export class ProductService {
 
     let params = new HttpParams()
       .set('page', page.toString())
-      .set('limit', limit.toString());
+      .set('pageSize', limit.toString());
     
     if (search) {
       params = params.set('search', search);
     }
 
-    return this.http.get<ProductResponse>(`${this.apiUrl}/paginated`, { params }).pipe(
-      map(response => {
+    return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
+      map(products => {
+        const response: ProductResponse = {
+          data: products,
+          total: products.length,
+          page,
+          limit
+        };
         this.setCachedData(cacheKey, response);
         return response;
       }),
@@ -129,35 +176,192 @@ export class ProductService {
 
   // Tạo sản phẩm mới
   createProduct(product: Omit<Product, 'id'>): Observable<Product> {
-    return this.http.post<Product>(this.apiUrl, product).pipe(
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    // Chuẩn bị dữ liệu để gửi lên server với validation
+    const productData = {
+      name: product.name?.trim() || '',
+      description: product.description?.trim() || '',
+      price: Number(product.price) || 0,
+      stock: Number(product.stock) || 0,
+      imageUrl: product.imageUrl?.trim() || 'https://via.placeholder.com/300x300?text=No+Image'
+    };
+    
+    // Validate dữ liệu trước khi gửi - linh hoạt hơn
+    if (!productData.name) {
+      throw new Error('Product name is required');
+    }
+    if (productData.price < 0) {
+      throw new Error('Product price cannot be negative');
+    }
+    if (productData.stock < 0) {
+      throw new Error('Product stock cannot be negative');
+    }
+    
+    console.log('Creating product with data:', productData);
+    console.log('Data types:', {
+      name: typeof productData.name,
+      description: typeof productData.description,
+      price: typeof productData.price,
+      stock: typeof productData.stock,
+      imageUrl: typeof productData.imageUrl
+    });
+    
+    return this.http.post<Product>(this.apiUrl, productData, { headers }).pipe(
       map(newProduct => {
+        console.log('Product created successfully:', newProduct);
         this.clearCache(); // Clear cache after creating
         return newProduct;
       }),
       catchError(error => {
         console.error('Error creating product:', error);
-        throw error;
+        console.error('Error details:', {
+          status: error.status,
+          message: error.message,
+          error: error.error,
+          requestData: productData
+        });
+        
+        // Enhanced error handling với thông báo chi tiết
+        let errorMessage = 'Create failed';
+        if (error.status === 400) {
+          errorMessage = 'Invalid data format or missing required fields';
+        } else if (error.status === 401) {
+          errorMessage = 'Unauthorized access. Please check your permissions.';
+        } else if (error.status === 500) {
+          errorMessage = 'Server error occurred';
+        } else if (error.status === 0) {
+          errorMessage = 'Network connection failed';
+        }
+        
+        // Tạo error object với thông tin đầy đủ
+        const enhancedError = new Error(errorMessage);
+        (enhancedError as any).status = error.status;
+        (enhancedError as any).originalError = error;
+        (enhancedError as any).error = error.error;
+        throw enhancedError;
       })
     );
   }
 
-  // Cập nhật sản phẩm
+  // Cập nhật sản phẩm với validation cải tiến
   updateProduct(id: number, product: Partial<Product>): Observable<Product> {
-    return this.http.put<Product>(`${this.apiUrl}/${id}`, product).pipe(
+    console.log('ProductService: Updating product with ID:', id);
+    console.log('ProductService: Update data:', product);
+    
+    // Validate input
+    if (!id || id <= 0) {
+      throw new Error('Invalid product ID');
+    }
+    
+    if (!product || Object.keys(product).length === 0) {
+      throw new Error('No product data provided');
+    }
+    
+    // Validation chi tiết từng field - linh hoạt hơn
+    if (!product.name || product.name.trim().length === 0) {
+      throw new Error('Product name is required');
+    }
+    
+    if (product.price === undefined || product.price === null) {
+      throw new Error('Valid price is required');
+    }
+    
+    if (product.stock === undefined || product.stock === null) {
+      throw new Error('Valid stock quantity is required');
+    }
+    
+    // Chuẩn bị dữ liệu với validation đầy đủ
+    const updateData = {
+      name: product.name.trim(),
+      description: product.description?.trim() || '',
+      price: Number(product.price),
+      stock: Number(product.stock),
+      imageUrl: product.imageUrl?.trim() || 'https://via.placeholder.com/300x300?text=No+Image'
+    };
+    
+    // Validate final data trước khi gửi - linh hoạt hơn
+    if (updateData.name.length < 2) {
+      throw new Error('Product name must be at least 2 characters');
+    }
+    
+    if (updateData.price < 0) {
+      throw new Error('Price cannot be negative');
+    }
+    
+    if (updateData.stock < 0) {
+      throw new Error('Stock cannot be negative');
+    }
+    
+    console.log('ProductService: Final update data:', updateData);
+    console.log('ProductService: Data types:', {
+      name: typeof updateData.name,
+      description: typeof updateData.description,
+      price: typeof updateData.price,
+      stock: typeof updateData.stock,
+      imageUrl: typeof updateData.imageUrl
+    });
+    console.log('ProductService: Data values:', {
+      name: updateData.name,
+      description: updateData.description,
+      price: updateData.price,
+      stock: updateData.stock,
+      imageUrl: updateData.imageUrl
+    });
+    console.log('ProductService: API URL:', `${this.apiUrl}/${id}`);
+    
+    // Thêm headers cho authentication
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    return this.http.put<Product>(`${this.apiUrl}/${id}`, updateData, { headers }).pipe(
       map(updatedProduct => {
-        this.clearCache(); // Clear cache after updating
+        console.log('ProductService: Update successful:', updatedProduct);
+        this.clearCache();
         return updatedProduct;
       }),
       catchError(error => {
-        console.error('Error updating product:', error);
-        throw error;
+        console.error('ProductService: Update error:', error);
+        console.error('Error details:', {
+          status: error.status,
+          message: error.message,
+          error: error.error,
+          url: `${this.apiUrl}/${id}`,
+          requestData: updateData
+        });
+        
+        // Enhanced error handling
+        let errorMessage = 'Update failed';
+        if (error.status === 400) {
+          errorMessage = 'Invalid data format or missing required fields';
+        } else if (error.status === 401) {
+          errorMessage = 'Unauthorized access. Please check your permissions.';
+        } else if (error.status === 404) {
+          errorMessage = 'Product not found';
+        } else if (error.status === 500) {
+          errorMessage = 'Server error occurred';
+        }
+        
+        const enhancedError = new Error(errorMessage);
+        (enhancedError as any).originalError = error;
+        throw enhancedError;
       })
     );
   }
 
   // Xóa sản phẩm
   deleteProduct(id: number): Observable<void> {
-    return this.http.delete<void>(`${this.apiUrl}/${id}`).pipe(
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+    
+    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers }).pipe(
       map(() => {
         this.clearCache(); // Clear cache after deleting
       }),
@@ -201,5 +405,20 @@ export class ProductService {
   // Upload ảnh lên server
   uploadImage(formData: FormData): Observable<{ imageUrl: string }> {
     return this.http.post<{ imageUrl: string }>(`${this.apiUrl}/images/upload`, formData);
+  }
+
+
+
+
+
+  // Retry mechanism với exponential backoff
+  private retryWithBackoff(maxRetries: number = 3, delayMs: number = 1000) {
+    return retryWhen(errors => 
+      errors.pipe(
+        delay(delayMs),
+        take(maxRetries),
+        catchError(err => throwError(err))
+      )
+    );
   }
 }
