@@ -1,0 +1,131 @@
+<div class="user-management">
+  <!-- Back to Dashboard Button -->
+  <div class="back-navigation">
+    <button class="btn btn-secondary" (click)="goBack()">
+      ← Quay lại Dashboard
+    </button>
+  </div>
+
+  <!-- Header Section -->
+  <div class="page-header floating">
+    <div class="header-content">
+      <h1 class="page-title">Quản lý người dùng</h1>
+      <p class="page-subtitle">Quản lý tài khoản khách hàng và phân quyền</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="refreshUsers()" title="Làm mới dữ liệu">
+        <span class="btn-icon">🔄</span>
+        Làm mới
+      </button>
+      <button class="btn btn-primary glow" (click)="openAddUserModal()">
+        <span class="btn-icon">+</span>
+        Thêm người dùng
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading && !showSkeleton">
+    <div class="loading-spinner"></div>
+    <p>Đang tải danh sách người dùng...</p>
+  </div>
+
+  <!-- Skeleton Loading -->
+  <div class="skeleton-container" *ngIf="showSkeleton">
+    <div class="skeleton-table">
+      <div class="skeleton-header">
+        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7]"></div>
+      </div>
+      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-badge"></div>
+        <div class="skeleton-cell skeleton-date"></div>
+        <div class="skeleton-cell skeleton-date"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-container" *ngIf="errorMessage && !loading && !showSkeleton">
+    <div class="error-message">
+      <span class="error-icon">⚠️</span>
+      <p>{{ errorMessage }}</p>
+      <button class="btn btn-primary" (click)="loadCustomers()">Thử lại</button>
+    </div>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-container" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length > 0">
+    <table class="users-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Tên đăng nhập</th>
+          <th>Họ tên</th>
+          <th>Email</th>
+          <th>Số điện thoại</th>
+          <th>Vai trò</th>
+          <th>Ngày tạo</th>
+          <th>Ngày cập nhật</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let customer of customers; trackBy: trackByUserId">
+          <td class="user-id">{{ customer.id }}</td>
+          <td class="user-username">
+            <span class="username">{{ customer.username }}</span>
+          </td>
+          <td class="user-fullname">
+            <span class="fullname">{{ customer.fullName || '-' }}</span>
+          </td>
+          <td class="user-email">
+            <span class="email">{{ customer.email }}</span>
+          </td>
+          <td class="user-phone">
+            <span class="phone">{{ customer.phone || '-' }}</span>
+          </td>
+          <td class="user-role">
+            <span class="role-badge" [ngClass]="getRoleClass(customer.role)">
+              {{ getRoleText(customer.role) }}
+            </span>
+          </td>
+          <td class="user-date">{{ formatDate(customer.createdAt) }}</td>
+          <td class="user-date">{{ formatDate(customer.updatedAt) }}</td>
+          <td class="user-actions">
+            <div class="action-buttons">
+              <button class="btn-action btn-edit" (click)="editUser(customer)" title="Chỉnh sửa">
+                ✏️
+              </button>
+              <button class="btn-action btn-delete" (click)="deleteUser(customer)" title="Xóa">
+                🗑️
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length === 0">
+    <div class="empty-message">
+      <span class="empty-icon">👥</span>
+      <p>Không có dữ liệu người dùng</p>
+    </div>
+  </div>
+
+  <!-- User Insert/Edit Modal -->
+  <app-user-insert-edit
+    *ngIf="showModal || selectedCustomer"
+    [showModal]="showModal"
+    [isEditing]="isEditing"
+    [selectedCustomer]="selectedCustomer"
+    (modalClosed)="onModalClosed()"
+    (customerSaved)="onCustomerSaved($event)">
+  </app-user-insert-edit>
+</div>
+

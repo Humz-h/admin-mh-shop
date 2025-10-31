@@ -1,0 +1,41 @@
+<div class="transaction-container">
+  <h2>Lịch sử xuất nhập kho</h2>
+
+  <div *ngIf="loading" class="loading">
+    <p>Đang tải dữ liệu...</p>
+  </div>
+
+  <div *ngIf="errorMessage" class="error-message">
+    {{ errorMessage }}
+  </div>
+
+  <table *ngIf="!loading && transactions.length > 0" class="transaction-table">
+    <thead>
+      <tr>
+        <th>Sản phẩm</th>
+        <th>Loại giao dịch</th>
+        <th>Số lượng</th>
+        <th>Ngày</th>
+        <th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let t of transactions">
+        <td>{{ t.product?.name }}</td>
+        <td>
+          <span [ngClass]="t.transactionType === 'Import' ? 'text-green' : 'text-red'">
+            {{ t.transactionType === 'Import' ? 'Nhập kho' : 'Xuất kho' }}
+          </span>
+        </td>
+        <td>{{ t.quantity }}</td>
+        <td>{{ t.transactionDate | date: 'dd/MM/yyyy HH:mm' }}</td>
+        <td>{{ t.note || '-' }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div *ngIf="!loading && transactions.length === 0" class="empty-state">
+    <p>Không có lịch sử giao dịch</p>
+  </div>
+</div>
+

@@ -427,6 +427,7 @@ body {
   margin: var(--space-2) 0;
   border-radius: var(--radius-xl);
   border: 1px solid transparent;
+  text-decoration: none;
   
   &::before {
     content: '';

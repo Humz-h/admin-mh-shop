@@ -58,7 +58,7 @@ export interface ProductResponse {
   providedIn: 'root'
 })
 export class ProductService {
-  private apiUrl = 'http://localhost:5000/api/Products';
+  private apiUrl = 'http://localhost:5000/api/products';
   private cache = new Map<string, any>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
   private loadingStates = new Map<string, Observable<any>>(); // Tránh duplicate requests
@@ -89,7 +89,13 @@ export class ProductService {
         // Map dữ liệu từ API response để đảm bảo tương thích
         const mappedProducts = products.map(product => ({
           ...product,
-          imageUrl: product.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image',
+          imageUrl: product.imageUrl && 
+                   product.imageUrl.trim() !== '' && 
+                   !product.imageUrl.includes('placeholder.com') &&
+                   !product.imageUrl.includes('via.placeholder.com') &&
+                   (product.imageUrl.startsWith('http') || product.imageUrl.startsWith('/'))
+                   ? product.imageUrl 
+                   : '', // Để trống thay vì placeholder URL
           status: product.status !== undefined ? product.status : true
         }));
         this.setCachedData(cacheKey, mappedProducts);
@@ -185,9 +191,17 @@ export class ProductService {
     const productData = {
       name: product.name?.trim() || '',
       description: product.description?.trim() || '',
+      originalPrice: Number(product.originalPrice) || 0,
+      salePrice: Number(product.salePrice) || 0,
       price: Number(product.price) || 0,
+      imageUrl: product.imageUrl?.trim() || '',
+      status: product.status !== undefined ? product.status : true,
+      category: product.category?.trim() || 'Điện tử',
+      productGroup: product.productGroup?.trim() || 'Sản phẩm',
+      productCode: product.productCode?.trim() || `PRD-${Date.now()}`,
       stock: Number(product.stock) || 0,
-      imageUrl: product.imageUrl?.trim() || 'https://via.placeholder.com/300x300?text=No+Image'
+      productDetails: product.productDetails || [],
+      productVariants: product.productVariants || []
     };
     
     // Validate dữ liệu trước khi gửi - linh hoạt hơn
@@ -202,6 +216,7 @@ export class ProductService {
     }
     
     console.log('Creating product with data:', productData);
+    console.log('ImageUrl being sent:', productData.imageUrl);
     console.log('Data types:', {
       name: typeof productData.name,
       description: typeof productData.description,
@@ -278,9 +293,17 @@ export class ProductService {
     const updateData = {
       name: product.name.trim(),
       description: product.description?.trim() || '',
+      originalPrice: Number(product.originalPrice) || 0,
+      salePrice: Number(product.salePrice) || 0,
       price: Number(product.price),
+      imageUrl: product.imageUrl?.trim() || '',
+      status: product.status !== undefined ? product.status : true,
+      category: product.category?.trim() || 'Điện tử',
+      productGroup: product.productGroup?.trim() || 'Sản phẩm',
+      productCode: product.productCode?.trim() || `PRD-${Date.now()}`,
       stock: Number(product.stock),
-      imageUrl: product.imageUrl?.trim() || 'https://via.placeholder.com/300x300?text=No+Image'
+      productDetails: product.productDetails || [],
+      productVariants: product.productVariants || []
     };
     
     // Validate final data trước khi gửi - linh hoạt hơn
@@ -297,6 +320,7 @@ export class ProductService {
     }
     
     console.log('ProductService: Final update data:', updateData);
+    console.log('ImageUrl being sent:', updateData.imageUrl);
     console.log('ProductService: Data types:', {
       name: typeof updateData.name,
       description: typeof updateData.description,

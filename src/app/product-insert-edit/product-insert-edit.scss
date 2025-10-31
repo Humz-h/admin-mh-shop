@@ -353,28 +353,38 @@
 }
 
 .image-upload-area {
-  border: 2px dashed #d1d5db;
-  border-radius: 12px;
-  padding: 1rem;
+  border: 3px dashed #cbd5e1;
+  border-radius: 20px;
+  padding: 2rem;
   text-align: center;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
   position: relative;
-  min-height: 300px;
+  min-height: 350px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f9fafb;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
   
   &:hover {
-    border-color: #667eea;
-    background: rgba(102, 126, 234, 0.05);
+    border-color: #3b82f6;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(59, 130, 246, 0.02) 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(59, 130, 246, 0.15);
   }
   
   &.has-image {
     padding: 0;
     border: none;
     background: none;
+    min-height: auto;
+    box-shadow: none;
+    
+    &:hover {
+      transform: none;
+      box-shadow: none;
+    }
   }
   
   .file-input {
@@ -385,23 +395,45 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
     
     .upload-icon {
-      color: #9ca3af;
+      color: #3b82f6;
+      font-size: 3rem;
+      transition: all 0.3s ease;
+      filter: drop-shadow(0 4px 8px rgba(59, 130, 246, 0.2));
     }
     
     .upload-text {
-      color: #6b7280;
-      font-weight: 500;
+      color: #1e293b;
+      font-weight: 600;
+      font-size: 1.125rem;
       margin-bottom: 0.5rem;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
     }
     
     .upload-specs {
-      color: #9ca3af;
-      font-size: 0.75rem;
-      line-height: 1.4;
+      color: #64748b;
+      font-size: 0.875rem;
+      line-height: 1.5;
       margin-top: 0.5rem;
+      background: rgba(255, 255, 255, 0.7);
+      padding: 0.75rem 1.5rem;
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+  }
+  
+  &:hover .upload-placeholder {
+    .upload-icon {
+      color: #2563eb;
+      transform: scale(1.1);
+      filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.3));
+    }
+    
+    .upload-text {
+      color: #1e40af;
     }
   }
   
@@ -409,12 +441,24 @@
     position: relative;
     width: 100%;
     height: 200px;
+    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    border: 2px solid rgba(255, 255, 255, 0.8);
     
     .preview-image {
       width: 100%;
       height: 100%;
-      object-fit: cover;
-      border-radius: 8px;
+      object-fit: contain;
+      object-position: center;
+      border-radius: 14px;
+      transition: all 0.3s ease;
+      background: white;
+      
+      &:hover {
+        transform: scale(1.02);
+      }
     }
     
     .image-overlay {
@@ -423,30 +467,51 @@
       left: 0;
       right: 0;
       bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
+      background: linear-gradient(135deg, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 1rem;
+      gap: 1.5rem;
       opacity: 0;
-      transition: opacity 0.3s ease;
-      border-radius: 8px;
+      transition: all 0.3s ease;
+      border-radius: 14px;
+      backdrop-filter: blur(4px);
       
       &:hover {
         opacity: 1;
       }
       
       .remove-btn, .change-btn {
-        background: rgba(255, 255, 255, 0.9);
-        border: none;
-        border-radius: 8px;
-        padding: 0.5rem;
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.85) 100%);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.3s ease;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #374151;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        backdrop-filter: blur(8px);
         
         &:hover {
-          background: white;
-          transform: scale(1.1);
+          background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+          transform: translateY(-2px) scale(1.05);
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+          color: #1f2937;
+        }
+        
+        &:active {
+          transform: translateY(0) scale(1.02);
+        }
+      }
+      
+      .remove-btn {
+        color: #dc2626;
+        
+        &:hover {
+          background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+          color: #b91c1c;
         }
       }
     }
@@ -609,6 +674,48 @@
     max-height: 40vh;
   }
   
+  .image-preview {
+    height: 150px;
+    border-radius: 12px;
+    
+    .preview-image {
+      border-radius: 10px;
+    }
+    
+    .image-overlay {
+      border-radius: 10px;
+      gap: 1rem;
+      
+      .remove-btn, .change-btn {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.75rem;
+      }
+    }
+  }
+  
+  .image-upload-area {
+    min-height: 200px;
+    padding: 1.5rem;
+    border-radius: 16px;
+    
+    .upload-placeholder {
+      gap: 1rem;
+      
+      .upload-icon {
+        font-size: 2.5rem;
+      }
+      
+      .upload-text {
+        font-size: 1rem;
+      }
+      
+      .upload-specs {
+        font-size: 0.75rem;
+        padding: 0.5rem 1rem;
+      }
+    }
+  }
+  
   .right-column {
     width: 100%;
     padding: 1rem;
@@ -637,7 +744,23 @@
   }
   
   .image-upload-area {
-    min-height: 200px;
+    min-height: 180px;
+    padding: 1rem;
+    
+    .upload-placeholder {
+      .upload-icon {
+        font-size: 2rem;
+      }
+      
+      .upload-text {
+        font-size: 0.875rem;
+      }
+      
+      .upload-specs {
+        font-size: 0.7rem;
+        padding: 0.5rem 0.75rem;
+      }
+    }
   }
   
   /* Toast notification responsive */
@@ -668,7 +791,11 @@
     padding: 0.75rem;
   }
   
-  .form-section {
+  .image-preview {
+    height: 80px;
+  }
+  
+a  .form-section {
     padding: 0.75rem;
   }
   

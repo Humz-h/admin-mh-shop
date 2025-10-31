@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService, Product, ProductDetail, ProductVariant } from '../services/product';
@@ -11,7 +11,7 @@ import { UploadService } from '../services/upload.service';
   styleUrl: './product-insert-edit.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class ProductInsertEdit implements OnInit {
+export class ProductInsertEdit implements OnInit, OnChanges {
   @Input() showModal: boolean = false;
   @Input() isEditing: boolean = false;
   @Input() selectedProduct: any = null;
@@ -43,12 +43,36 @@ export class ProductInsertEdit implements OnInit {
     this.initializeProduct();
   }
 
-  ngOnChanges() {
-    if (this.selectedProduct) {
+  ngOnChanges(changes: SimpleChanges) {
+    console.log('ProductInsertEdit ngOnChanges:', changes);
+    console.log('Current isEditing:', this.isEditing);
+    console.log('Current showModal:', this.showModal);
+    console.log('Current selectedProduct:', this.selectedProduct);
+    
+    if (changes['isEditing']) {
+      console.log('isEditing changed from', changes['isEditing'].previousValue, 'to', changes['isEditing'].currentValue);
+    }
+    
+    if (changes['showModal']) {
+      console.log('showModal changed from', changes['showModal'].previousValue, 'to', changes['showModal'].currentValue);
+    }
+    
+    if (changes['selectedProduct']) {
+      console.log('selectedProduct changed from', changes['selectedProduct'].previousValue, 'to', changes['selectedProduct'].currentValue);
+    }
+    
+    // Load product data when editing
+    if (this.isEditing && this.selectedProduct && this.showModal) {
+      console.log('Loading product data for editing...');
       this.loadProductData();
-    } else {
+    } 
+    // Initialize new product when adding
+    else if (!this.isEditing && this.showModal) {
+      console.log('Initializing new product...');
       this.initializeProduct();
     }
+    
+    this.cdr.markForCheck();
   }
 
   // Initialize empty product
@@ -79,17 +103,96 @@ export class ProductInsertEdit implements OnInit {
 
   // Load product data for editing
   loadProductData() {
+    console.log('=== LOADING PRODUCT DATA FOR EDIT ===');
+    console.log('Selected product:', this.selectedProduct);
+    
     this.product = { ...this.selectedProduct };
     this.productDetails = [...(this.selectedProduct.productDetails || [])];
     this.productVariants = [...(this.selectedProduct.productVariants || [])];
     
-    // Calculate discount percentage from original price and sale price
-    if (this.product.originalPrice > 0 && this.product.price > 0) {
-      const discountAmount = this.product.originalPrice - this.product.price;
-      this.discountPercentage = Math.round((discountAmount / this.product.originalPrice) * 100 * 100) / 100; // Round to 2 decimal places
+    // Set preview image if product has imageUrl
+    if (this.product.imageUrl && this.product.imageUrl.trim() !== '') {
+      console.log('Product has imageUrl:', this.product.imageUrl);
+      
+      // Nếu là relative path, tạo full URL
+      if (this.product.imageUrl.startsWith('/')) {
+        this.previewImageUrl = `http://localhost:5000${this.product.imageUrl}`;
+      } else if (this.product.imageUrl.startsWith('http')) {
+        this.previewImageUrl = this.product.imageUrl;
+      } else {
+        this.previewImageUrl = `http://localhost:5000/${this.product.imageUrl}`;
+      }
+      
+      console.log('Set previewImageUrl to:', this.previewImageUrl);
     } else {
-      this.discountPercentage = 0;
+      console.log('No imageUrl found, clearing preview');
+      this.previewImageUrl = '';
     }
+    
+    // Calculate discount percentage and sale price from original price and current price
+    console.log('=== CALCULATING DISCOUNT PERCENTAGE ===');
+    console.log('Raw data - originalPrice:', this.product.originalPrice, 'price:', this.product.price, 'salePrice:', this.product.salePrice);
+    
+    // Parse values to ensure they are numbers
+    const originalPrice = Number(this.product.originalPrice) || 0;
+    const currentPrice = Number(this.product.price) || 0;
+    const salePrice = Number(this.product.salePrice) || 0;
+    
+    console.log('Parsed values - originalPrice:', originalPrice, 'currentPrice:', currentPrice, 'salePrice:', salePrice);
+    
+    // Determine the final selling price
+    let finalPrice = 0;
+    if (salePrice > 0) {
+      finalPrice = salePrice;
+      console.log('Using salePrice as final price:', finalPrice);
+    } else if (currentPrice > 0) {
+      finalPrice = currentPrice;
+      console.log('Using current price as final price:', finalPrice);
+    } else {
+      finalPrice = originalPrice;
+      console.log('Using original price as final price:', finalPrice);
+    }
+    
+    console.log('Final price determined:', finalPrice);
+    
+    // Calculate discount percentage
+    if (originalPrice > 0 && finalPrice > 0) {
+      if (finalPrice < originalPrice) {
+        // There is a discount
+        const discountAmount = originalPrice - finalPrice;
+        this.discountPercentage = Math.round((discountAmount / originalPrice) * 100 * 100) / 100;
+        console.log('Discount found - amount:', discountAmount, 'percentage:', this.discountPercentage);
+      } else if (finalPrice === originalPrice) {
+        // No discount
+        this.discountPercentage = 0;
+        console.log('No discount - final price equals original price');
+      } else {
+        // Final price is higher than original (shouldn't happen but handle it)
+        this.discountPercentage = 0;
+        console.log('No discount - final price > original price (unusual case)');
+      }
+      
+      // Set the prices
+      this.product.salePrice = finalPrice;
+      this.product.price = finalPrice;
+    } else if (originalPrice > 0) {
+      // Only original price available
+      this.discountPercentage = 0;
+      this.product.salePrice = originalPrice;
+      this.product.price = originalPrice;
+      console.log('Only original price available - no discount');
+    } else {
+      // No price data
+      this.discountPercentage = 0;
+      this.product.salePrice = 0;
+      this.product.price = 0;
+      console.log('No price data available');
+    }
+    
+    console.log('Final calculated values:');
+    console.log('- discountPercentage:', this.discountPercentage);
+    console.log('- product.salePrice:', this.product.salePrice);
+    console.log('- product.price:', this.product.price);
     
     if (this.productDetails.length === 0) {
       this.addProductDetail();
@@ -99,6 +202,7 @@ export class ProductInsertEdit implements OnInit {
     }
     
     this.clearMessages();
+    this.cdr.markForCheck();
   }
 
   // Add ProductDetail
@@ -204,23 +308,37 @@ export class ProductInsertEdit implements OnInit {
 
   // Form submission
   onSaveProductClick(event: Event) {
+    console.log('=== SAVE BUTTON CLICKED IN CHILD ===');
+    console.log('Event:', event);
+    console.log('Is editing:', this.isEditing);
+    console.log('Product data:', this.product);
+    
     event.preventDefault();
     event.stopPropagation();
     
     const form = (event.target as any).closest('form');
     if (form && !form.checkValidity()) {
+      console.log('Form validation failed');
       form.reportValidity();
       return;
     }
     
+    console.log('Form validation passed, calling saveProduct()');
     this.saveProduct();
   }
 
   saveProduct() {
+    console.log('=== SAVE PRODUCT CALLED IN CHILD ===');
+    console.log('Is editing:', this.isEditing);
+    console.log('Product:', this.product);
+    
     this.clearMessages();
     
     const validationResult = this.validateProductData();
+    console.log('Validation result:', validationResult);
+    
     if (!validationResult.isValid) {
+      console.log('Validation failed:', validationResult.message);
       this.saveError = validationResult.message;
       this.cdr.markForCheck();
       return;
@@ -228,16 +346,20 @@ export class ProductInsertEdit implements OnInit {
     
     try {
       const productData = this.prepareProductData();
+      console.log('Prepared product data:', productData);
       
       this.isSaving = true;
       this.cdr.markForCheck();
       
       if (this.isEditing) {
+        console.log('Calling updateProduct...');
         this.updateProduct(productData);
       } else {
+        console.log('Calling createProduct...');
         this.createProduct(productData);
       }
     } catch (error) {
+      console.error('Error in saveProduct:', error);
       this.saveError = (error as Error).message || 'Có lỗi xảy ra khi chuẩn bị dữ liệu.';
       this.isSaving = false;
       this.cdr.markForCheck();
@@ -288,7 +410,7 @@ export class ProductInsertEdit implements OnInit {
       originalPrice: Number(this.product.originalPrice) || 0,
       salePrice: Number(this.product.salePrice) || 0,
       price: Number(this.product.price) || 0,
-      imageUrl: this.product.imageUrl?.trim() || 'https://via.placeholder.com/300x300?text=No+Image',
+      imageUrl: this.product.imageUrl?.trim() || '',
       status: this.product.status !== undefined ? this.product.status : true,
       category: this.product.category?.trim() || 'Điện tử',
       productGroup: this.product.productGroup?.trim() || 'Sản phẩm',
@@ -303,8 +425,14 @@ export class ProductInsertEdit implements OnInit {
 
   // Create product
   createProduct(productData: any) {
+    console.log('=== CREATE PRODUCT CALLED ===');
+    console.log('Product data:', productData);
+    console.log('Product ID:', this.product.id);
+    
     this.productService.createProduct(productData).subscribe({
       next: (newProduct) => {
+        console.log('=== PRODUCT CREATED SUCCESSFULLY ===');
+        console.log('New product:', newProduct);
         this.saveSuccess = 'Tạo sản phẩm thành công!';
         this.isSaving = false;
         this.cdr.markForCheck();
@@ -315,6 +443,8 @@ export class ProductInsertEdit implements OnInit {
         }, 1500);
       },
       error: (error) => {
+        console.error('=== ERROR CREATING PRODUCT ===');
+        console.error('Error:', error);
         this.handleCreateError(error);
       }
     });
@@ -322,8 +452,14 @@ export class ProductInsertEdit implements OnInit {
 
   // Update product
   updateProduct(productData: any) {
+    console.log('=== UPDATE PRODUCT CALLED ===');
+    console.log('Product ID:', this.product.id);
+    console.log('Product data:', productData);
+    
     this.productService.updateProduct(this.product.id, productData).subscribe({
       next: (updatedProduct) => {
+        console.log('=== PRODUCT UPDATED SUCCESSFULLY ===');
+        console.log('Updated product:', updatedProduct);
         this.saveSuccess = 'Cập nhật sản phẩm thành công!';
         this.isSaving = false;
         this.cdr.markForCheck();
@@ -334,6 +470,8 @@ export class ProductInsertEdit implements OnInit {
         }, 1000);
       },
       error: (error) => {
+        console.error('=== ERROR UPDATING PRODUCT ===');
+        console.error('Error:', error);
         this.handleUpdateError(error);
       }
     });
@@ -477,21 +615,32 @@ export class ProductInsertEdit implements OnInit {
 
   // Calculate sale price based on original price and discount percentage
   calculateSalePrice() {
+    console.log('=== CALCULATING SALE PRICE ===');
+    console.log('originalPrice:', this.product.originalPrice);
+    console.log('discountPercentage:', this.discountPercentage);
+    
     const originalPrice = Number(this.product.originalPrice) || 0;
     const discount = Number(this.discountPercentage) || 0;
     
+    console.log('Parsed originalPrice:', originalPrice);
+    console.log('Parsed discount:', discount);
+    
     if (originalPrice > 0 && discount >= 0 && discount <= 100) {
       const discountAmount = (originalPrice * discount) / 100;
-      this.product.price = Math.round(originalPrice - discountAmount);
-      this.product.salePrice = Math.round(discountAmount);
+      this.product.price = Math.round(originalPrice - discountAmount);  // Giá bán cuối cùng
+      this.product.salePrice = Math.round(originalPrice - discountAmount);  // SalePrice = giá bán cuối cùng
+      console.log('Calculated price:', this.product.price, 'salePrice:', this.product.salePrice);
     } else if (originalPrice > 0 && discount === 0) {
       this.product.price = originalPrice;
-      this.product.salePrice = 0;
+      this.product.salePrice = originalPrice;  // SalePrice = originalPrice khi không có discount
+      console.log('No discount - price:', this.product.price, 'salePrice:', this.product.salePrice);
     } else {
       this.product.price = 0;
       this.product.salePrice = 0;
+      console.log('Zero values - price:', this.product.price, 'salePrice:', this.product.salePrice);
     }
     
+    console.log('Final values - price:', this.product.price, 'salePrice:', this.product.salePrice, 'discountPercentage:', this.discountPercentage);
     this.cdr.markForCheck();
   }
 

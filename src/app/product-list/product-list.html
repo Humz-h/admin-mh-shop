@@ -6,148 +6,202 @@
     </button>
   </div>
 
-  <!-- Header Section -->
-  <div class="page-header floating">
-    <div class="header-content">
-      <h1 class="page-title">Quản lý sản phẩm</h1>
-      <p class="page-subtitle">Quản lý danh sách sản phẩm trong hệ thống</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-secondary" (click)="refreshProducts()" title="Làm mới dữ liệu">
-        <span class="btn-icon">🔄</span>
-        Làm mới
-      </button>
-        <button class="btn btn-primary glow" (click)="openAddProductModal()">
-          <span class="btn-icon">+</span>
-          Thêm sản phẩm
+  <!-- Main Card Container -->
+  <div class="main-card">
+    <!-- Card Header -->
+    <div class="card-header">
+      <div class="card-header-content">
+        <h2 class="card-title">Products List</h2>
+        <p class="card-subtitle">Track your store's progress to boost your sales.</p>
+      </div>
+      <div class="card-header-actions">
+        <button class="btn btn-export" (click)="exportProducts()" title="Xuất dữ liệu">
+          <span class="btn-icon">📥</span>
+          Export
         </button>
-    </div>
-  </div>
-
-  <!-- Filters and Search -->
-  <div class="filters-section pulse">
-    <div class="search-box">
-      <input 
-        type="text" 
-        placeholder="Tìm kiếm sản phẩm..." 
-        [(ngModel)]="searchTerm"
-        (input)="onSearchInput()"
-        class="search-input">
-      <span class="search-icon">🔍</span>
-    </div>
-    <div class="filter-controls">
-            <select [(ngModel)]="selectedCategory" (change)="filterProducts()" class="filter-select">
-              <option value="">Tất cả danh mục</option>
-              <option value="Điện tử">Điện tử</option>
-              <option value="Điện gia dụng">Điện gia dụng</option>
-              <option value="Thời trang">Thời trang</option>
-              <option value="Sách">Sách</option>
-              <option value="Gia dụng">Gia dụng</option>
-            </select>
-      <select [(ngModel)]="sortBy" (change)="sortProducts()" class="filter-select">
-        <option value="name">Sắp xếp theo tên</option>
-        <option value="price">Sắp xếp theo giá</option>
-        <option value="stock">Sắp xếp theo tồn kho</option>
-        <option value="date">Sắp xếp theo ngày tạo</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- Loading State -->
-  <div class="loading-container" *ngIf="isLoading && !showSkeleton">
-    <div class="loading-spinner"></div>
-    <p>Đang tải danh sách sản phẩm...</p>
-  </div>
-
-  <!-- Skeleton Loading -->
-  <div class="skeleton-container" *ngIf="showSkeleton">
-    <div class="skeleton-table">
-      <div class="skeleton-header">
-        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7]"></div>
-      </div>
-      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
-        <div class="skeleton-cell skeleton-image"></div>
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-badge"></div>
-        <div class="skeleton-cell skeleton-price"></div>
-        <div class="skeleton-cell skeleton-badge"></div>
-        <div class="skeleton-cell skeleton-date"></div>
-        <div class="skeleton-cell skeleton-actions"></div>
+        <button class="btn btn-primary" (click)="openAddProductModal()">
+          <span class="btn-icon">+</span>
+          Add Product
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- Error State -->
-  <div class="error-container" *ngIf="error && !isLoading">
-    <div class="error-message">
-      <span class="error-icon">⚠️</span>
-      <p>{{ error }}</p>
-      <button class="btn btn-primary" (click)="loadProducts()">Thử lại</button>
+    <!-- Search and Filter Bar -->
+    <div class="search-filter-bar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input 
+          type="text" 
+          placeholder="Search..." 
+          [(ngModel)]="searchTerm"
+          (input)="onSearchInput()"
+          class="search-input">
+      </div>
+      <button class="btn btn-filter" (click)="toggleFilterPanel()" title="Bộ lọc">
+        <span class="btn-icon">⚙️</span>
+        Filter
+      </button>
     </div>
-  </div>
 
-  <!-- Products Table -->
-  <div class="table-container" *ngIf="!isLoading && !error && !showSkeleton">
+    <!-- Filter Dropdowns (Hidden by default, shown when filter panel is open) -->
+    <div class="filter-panel" *ngIf="showFilterPanel">
+      <div class="filter-controls">
+        <select [(ngModel)]="selectedCategory" (change)="filterProducts()" class="filter-select">
+          <option value="">Tất cả danh mục</option>
+          <option value="Điện tử">Điện tử</option>
+          <option value="Điện gia dụng">Điện gia dụng</option>
+          <option value="Thời trang">Thời trang</option>
+          <option value="Sách">Sách</option>
+          <option value="Gia dụng">Gia dụng</option>
+        </select>
+        <select [(ngModel)]="sortBy" (change)="sortProducts()" class="filter-select">
+          <option value="name">Sắp xếp theo tên</option>
+          <option value="price">Sắp xếp theo giá</option>
+          <option value="stock">Sắp xếp theo tồn kho</option>
+          <option value="date">Sắp xếp theo ngày tạo</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Loading State -->
+    <div class="loading-container" *ngIf="isLoading && !showSkeleton">
+      <div class="loading-spinner"></div>
+      <p>Đang tải danh sách sản phẩm...</p>
+    </div>
+
+    <!-- Skeleton Loading -->
+    <div class="skeleton-container" *ngIf="showSkeleton">
+      <div class="skeleton-table">
+        <div class="skeleton-header">
+          <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7]"></div>
+        </div>
+        <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
+          <div class="skeleton-cell skeleton-image"></div>
+          <div class="skeleton-cell skeleton-text"></div>
+          <div class="skeleton-cell skeleton-badge"></div>
+          <div class="skeleton-cell skeleton-price"></div>
+          <div class="skeleton-cell skeleton-badge"></div>
+          <div class="skeleton-cell skeleton-date"></div>
+          <div class="skeleton-cell skeleton-actions"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-container" *ngIf="error && !isLoading">
+      <div class="error-message">
+        <span class="error-icon">⚠️</span>
+        <p>{{ error }}</p>
+        <button class="btn btn-primary" (click)="loadProducts()">Thử lại</button>
+      </div>
+    </div>
+
+    <!-- Products Table -->
+    <div class="table-container" *ngIf="!isLoading && !error && !showSkeleton">
     <table class="products-table">
       <thead>
         <tr>
-          <th>Hình ảnh</th>
-          <th>Tên sản phẩm</th>
-          <th>Danh mục</th>
-          <th>Giá</th>
-          <th>Trạng thái</th>
-          <th>Ngày tạo</th>
-          <th>Thao tác</th>
+          <th class="checkbox-column">
+            <input type="checkbox" class="select-all-checkbox" (change)="toggleSelectAll($event)">
+          </th>
+          <th class="sortable" (click)="sortByColumn('name')">
+            Sản phẩm
+            <span class="sort-icon" *ngIf="currentSortColumn === 'name'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'name'">↑</span>
+          </th>
+          <th class="sortable" (click)="sortByColumn('category')">
+            Danh mục
+            <span class="sort-icon" *ngIf="currentSortColumn === 'category'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'category'">↑</span>
+          </th>
+          <th class="sortable" (click)="sortByColumn('brand')">
+            Thương hiệu
+            <span class="sort-icon" *ngIf="currentSortColumn === 'brand'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'brand'">↑</span>
+          </th>
+          <th class="sortable" (click)="sortByColumn('price')">
+            Giá
+            <span class="sort-icon" *ngIf="currentSortColumn === 'price'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'price'">↑</span>
+          </th>
+          <th class="sortable" (click)="sortByColumn('stock')">
+            Tồn kho
+            <span class="sort-icon" *ngIf="currentSortColumn === 'stock'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'stock'">↑</span>
+          </th>
+          <th class="sortable" (click)="sortByColumn('date')">
+            Ngày tạo
+            <span class="sort-icon" *ngIf="currentSortColumn === 'date'">
+              {{ sortDirection === 'asc' ? '↑' : '↓' }}
+            </span>
+            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'date'">↑</span>
+          </th>
+          <th class="actions-column"></th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let product of filteredProducts; trackBy: trackByProductId">
-          <td class="product-image">
-            <img 
-              [src]="getProductImage(product)" 
-              [alt]="product.name" 
-              class="product-thumbnail"
-              loading="lazy"
-              (error)="onImageError($event)">
+          <td class="checkbox-column">
+            <input type="checkbox" class="product-checkbox" [checked]="isProductSelected(product)" (change)="toggleProductSelection(product, $event)">
           </td>
-          <td class="product-name">
-            <div class="name-cell">
-              <span class="name">{{ product.name }}</span>
-              <span class="sku">SKU: {{ product.sku }}</span>
+          <td class="product-cell">
+            <div class="product-info">
+              <img 
+                [src]="getProductImage(product)" 
+                [alt]="product.name" 
+                class="product-thumbnail"
+                loading="lazy"
+                (error)="onImageError($event)">
+              <span class="product-name">{{ product.name }}</span>
             </div>
           </td>
-          <td class="product-category">
-            <span class="category-badge" [class]="'category-' + product.category">
-              {{ getCategoryName(product.category) }}
+          <td class="category-cell">
+            <span class="category-text">{{ getCategoryName(product.category) }}</span>
+          </td>
+          <td class="brand-cell">
+            <span class="brand-text">{{ getProductBrand(product) }}</span>
+          </td>
+          <td class="price-cell">
+            <span class="price">{{ formatCurrency(product.salePrice || product.price) }}</span>
+          </td>
+          <td class="stock-cell">
+            <span class="stock-badge" [class.in-stock]="product.stock > 0" [class.out-of-stock]="product.stock === 0">
+              {{ product.stock > 0 ? 'Còn hàng' : 'Hết hàng' }}
             </span>
           </td>
-          <td class="product-price">
-            <span class="price">{{ formatCurrency(product.price) }}</span>
+          <td class="date-cell">
+            {{ product.createdAt | date:'dd MMM, yyyy' }}
           </td>
-          <td class="product-status">
-            <span class="status-badge" [class.active]="product.status" [class.inactive]="!product.status">
-              {{ getStatusText(product.status) }}
-            </span>
-          </td>
-          <td class="product-date">
-            {{ product.createdAt | date:'dd/MM/yyyy' }}
-          </td>
-          <td class="product-actions">
-            <div class="action-buttons">
-              <button class="btn-action btn-edit" (click)="editProduct(product)" title="Chỉnh sửa">
-                ✏️
+          <td class="actions-cell">
+            <button class="menu-button" (click)="toggleActionMenu(product.id)" title="Tùy chọn">
+              <span class="menu-icon">⋯</span>
+            </button>
+            <div class="action-menu" *ngIf="activeMenuId === product.id">
+              <button class="menu-item" (click)="editProduct(product); closeActionMenu()">
+                Chỉnh sửa
               </button>
-              <button class="btn-action btn-delete" (click)="deleteProduct(product)" title="Xóa">
-                🗑️
+              <button class="menu-item" (click)="viewProduct(product); closeActionMenu()">
+                Xem
               </button>
-              <button class="btn-action btn-view" (click)="viewProduct(product)" title="Xem chi tiết">
-                👁️
+              <button class="menu-item delete" (click)="deleteProduct(product); closeActionMenu()">
+                Xóa
               </button>
             </div>
           </td>
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 
   <!-- Load More Button -->
@@ -199,6 +253,6 @@
     [showModal]="showModal"
     [isEditing]="isEditing"
     [selectedProduct]="selectedProduct"
-    (modalClosed)="closeModal()"
+    (modalClosed)="onModalClosed()"
     (productSaved)="onProductSaved($event)">
   </app-product-insert-edit>

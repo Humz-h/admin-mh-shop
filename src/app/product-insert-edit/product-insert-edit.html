@@ -54,9 +54,9 @@
               </div>
               
               <!-- Image Preview -->
-              <div class="image-preview" *ngIf="previewImageUrl || product.imageUrl">
+              <div class="image-preview" *ngIf="previewImageUrl">
                 <img 
-                  [src]="previewImageUrl || product.imageUrl" 
+                  [src]="previewImageUrl" 
                   [alt]="product.name || 'Preview'"
                   class="preview-image">
                 <div class="image-overlay">
@@ -438,7 +438,7 @@
         <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="isSaving">
           Hủy
         </button>
-        <button type="submit" class="btn btn-primary" [disabled]="isSaving || !productForm.valid">
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving">
           <span *ngIf="isSaving" class="loading-spinner-small"></span>
           {{ isSaving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Thêm mới') }}
         </button>

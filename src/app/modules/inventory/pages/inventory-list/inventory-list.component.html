@@ -1,0 +1,116 @@
+<div class="inventory-management">
+  <!-- Back to Dashboard Button -->
+  <div class="back-navigation">
+    <button class="btn btn-secondary" (click)="goBack()">
+      ← Quay lại Dashboard
+    </button>
+  </div>
+
+  <!-- Header Section -->
+  <div class="page-header floating">
+    <div class="header-content">
+      <h1 class="page-title">Quản lý tồn kho</h1>
+      <p class="page-subtitle">Quản lý kho hàng và xuất nhập kho</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary" (click)="refreshInventories()" title="Làm mới dữ liệu">
+        <span class="btn-icon">🔄</span>
+        Làm mới
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-container" *ngIf="loading && !showSkeleton">
+    <div class="loading-spinner"></div>
+    <p>Đang tải danh sách tồn kho...</p>
+  </div>
+
+  <!-- Skeleton Loading -->
+  <div class="skeleton-container" *ngIf="showSkeleton">
+    <div class="skeleton-table">
+      <div class="skeleton-header">
+        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6]"></div>
+      </div>
+      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-text"></div>
+        <div class="skeleton-cell skeleton-badge"></div>
+        <div class="skeleton-cell skeleton-date"></div>
+        <div class="skeleton-cell skeleton-badge"></div>
+        <div class="skeleton-cell skeleton-actions"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-container" *ngIf="errorMessage && !loading && !showSkeleton">
+    <div class="error-message">
+      <span class="error-icon">⚠️</span>
+      <p>{{ errorMessage }}</p>
+      <button class="btn btn-primary" (click)="loadInventories()">Thử lại</button>
+    </div>
+  </div>
+
+  <!-- Inventory Table -->
+  <div class="table-container" *ngIf="!loading && !errorMessage && !showSkeleton && inventories.length > 0">
+    <table class="inventory-table">
+      <thead>
+        <tr>
+          <th>Tên sản phẩm</th>
+          <th>Mã sản phẩm</th>
+          <th>Số lượng tồn</th>
+          <th>Ngày nhập gần nhất</th>
+          <th>Ngày trong kho</th>
+          <th>Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of inventories; trackBy: trackByProductId">
+          <td class="product-name">
+            <span class="name">{{ getProductName(item) }}</span>
+          </td>
+          <td>
+            <span class="product-code">{{ getProductCode(item) }}</span>
+          </td>
+          <td class="quantity-cell">
+            <span class="quantity-badge" 
+                  [class.low-stock]="getQuantity(item) > 0 && getQuantity(item) < 10" 
+                  [class.out-of-stock]="getQuantity(item) === 0">
+              {{ getQuantity(item) }}
+            </span>
+          </td>
+          <td>
+            <span *ngIf="item.lastImportDate">{{ item.lastImportDate | date: 'dd/MM/yyyy HH:mm' }}</span>
+            <span *ngIf="!item.lastImportDate">-</span>
+          </td>
+          <td>{{ getDaysInStock(item) }} ngày</td>
+          <td>
+            <div class="action-buttons">
+              <button class="btn-action btn-import" 
+                      (click)="importStock(getProductId(item))" 
+                      title="Nhập kho"
+                      [disabled]="!getProductId(item)">
+                📥
+              </button>
+              <button class="btn-action btn-export" 
+                      (click)="exportStock(getProductId(item))" 
+                      title="Xuất kho"
+                      [disabled]="!getProductId(item)">
+                📤
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Empty state -->
+  <div class="empty-state" *ngIf="!loading && !errorMessage && !showSkeleton && inventories.length === 0">
+    <div class="empty-message">
+      <span class="empty-icon">📦</span>
+      <p>Không có dữ liệu tồn kho</p>
+    </div>
+  </div>
+</div>

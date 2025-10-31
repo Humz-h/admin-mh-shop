@@ -1,0 +1,156 @@
+<!-- User Insert/Edit Modal -->
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>{{ isEditing ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới' }}</h2>
+      <button class="modal-close" (click)="closeModal()" type="button">×</button>
+    </div>
+    
+    <form class="user-form" #userForm="ngForm" (ngSubmit)="onSaveCustomer($event)">
+      <!-- Success/Error Messages -->
+      <div class="form-messages" *ngIf="saveSuccess || saveError">
+        <div class="message success" *ngIf="saveSuccess">
+          <span class="message-icon">✅</span>
+          {{ saveSuccess }}
+        </div>
+        <div class="message error" *ngIf="saveError">
+          <span class="message-icon">❌</span>
+          {{ saveError }}
+        </div>
+      </div>
+      
+      <div class="modal-body">
+        <!-- Basic Information -->
+        <div class="form-section">
+          <h3 class="section-title">Thông tin cơ bản</h3>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="username">Tên đăng nhập *</label>
+              <input 
+                type="text" 
+                id="username"
+                [(ngModel)]="customer.username" 
+                name="username"
+                required
+                minlength="3"
+                class="form-input"
+                placeholder="Nhập tên đăng nhập"
+                [class.error]="userForm.controls['username']?.invalid && userForm.controls['username']?.touched">
+              <div class="field-error" *ngIf="userForm.controls['username']?.invalid && userForm.controls['username']?.touched">
+                <span *ngIf="userForm.controls['username']?.errors?.['required']">Tên đăng nhập là bắt buộc</span>
+                <span *ngIf="userForm.controls['username']?.errors?.['minlength']">Tên đăng nhập phải có ít nhất 3 ký tự</span>
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="email">Email *</label>
+              <input 
+                type="email" 
+                id="email"
+                [(ngModel)]="customer.email" 
+                name="email"
+                required
+                class="form-input"
+                placeholder="Nhập email"
+                [class.error]="userForm.controls['email']?.invalid && userForm.controls['email']?.touched">
+              <div class="field-error" *ngIf="userForm.controls['email']?.invalid && userForm.controls['email']?.touched">
+                <span *ngIf="userForm.controls['email']?.errors?.['required']">Email là bắt buộc</span>
+                <span *ngIf="userForm.controls['email']?.errors?.['email']">Email không hợp lệ</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="fullName">Họ và tên</label>
+              <input 
+                type="text" 
+                id="fullName"
+                [(ngModel)]="customer.fullName" 
+                name="fullName"
+                class="form-input"
+                placeholder="Nhập họ và tên">
+            </div>
+            
+            <div class="form-group">
+              <label for="phone">Số điện thoại</label>
+              <input 
+                type="tel" 
+                id="phone"
+                [(ngModel)]="customer.phone" 
+                name="phone"
+                class="form-input"
+                placeholder="Nhập số điện thoại">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="role">Vai trò *</label>
+              <select 
+                id="role"
+                [(ngModel)]="customer.role" 
+                name="role"
+                required
+                class="form-select">
+                <option value="customer">Khách hàng</option>
+                <option value="admin">Quản trị viên</option>
+                <option value="staff">Nhân viên</option>
+              </select>
+            </div>
+            
+            <div class="form-group" *ngIf="!isEditing">
+              <label for="password">Mật khẩu *</label>
+              <input 
+                type="password" 
+                id="password"
+                [(ngModel)]="customer.password" 
+                name="password"
+                [required]="!isEditing"
+                minlength="6"
+                class="form-input"
+                placeholder="Nhập mật khẩu (tối thiểu 6 ký tự)">
+              <div class="field-error" *ngIf="userForm.controls['password']?.invalid && userForm.controls['password']?.touched && !isEditing">
+                <span *ngIf="userForm.controls['password']?.errors?.['required']">Mật khẩu là bắt buộc</span>
+                <span *ngIf="userForm.controls['password']?.errors?.['minlength']">Mật khẩu phải có ít nhất 6 ký tự</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-row" *ngIf="!isEditing">
+            <div class="form-group">
+              <label for="confirmPassword">Xác nhận mật khẩu *</label>
+              <input 
+                type="password" 
+                id="confirmPassword"
+                [(ngModel)]="customer.confirmPassword" 
+                name="confirmPassword"
+                [required]="!isEditing"
+                class="form-input"
+                placeholder="Nhập lại mật khẩu">
+              <div class="field-error" *ngIf="userForm.controls['confirmPassword']?.invalid && userForm.controls['confirmPassword']?.touched && !isEditing">
+                <span *ngIf="userForm.controls['confirmPassword']?.errors?.['required']">Xác nhận mật khẩu là bắt buộc</span>
+              </div>
+              <div class="field-error" *ngIf="customer.password && customer.confirmPassword && customer.password !== customer.confirmPassword && !isEditing">
+                <span>Mật khẩu xác nhận không khớp</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="closeModal()" [disabled]="isSaving">
+          Hủy
+        </button>
+        <button type="submit" class="btn btn-primary" [disabled]="isSaving || userForm.invalid">
+          <span *ngIf="isSaving" class="loading-spinner-small"></span>
+          {{ isSaving ? 'Đang lưu...' : (isEditing ? 'Cập nhật' : 'Tạo mới') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
