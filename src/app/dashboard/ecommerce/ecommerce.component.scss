@@ -1,0 +1,70 @@
+:host {
+  display: block;
+  width: 100%;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 768px) {
+  :host {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  :host {
+    padding-left: 2rem;
+    padding-right: 2rem;
+  }
+}
+
+// Ensure all child components have proper spacing
+app-customers-card,
+app-orders-card,
+app-statics-chart {
+  display: block;
+  width: 100%;
+}
+
+// Card wrapper styling
+.metric-card-wrapper {
+  min-height: 0;
+}
+
+// Statistics section
+.statistics-section {
+  margin-top: 2rem;
+}
+
+app-statics-chart {
+  display: block;
+  width: 100%;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+// Ensure grid items don't stick together
+.grid > * {
+  min-height: 0;
+}
+
+// Responsive spacing adjustments
+@media (max-width: 640px) {
+  :host {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+  }
+  
+  .metric-card-wrapper {
+    margin-bottom: 1rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :host {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+  }
+}
+

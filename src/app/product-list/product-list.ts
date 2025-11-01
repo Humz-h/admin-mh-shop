@@ -1,12 +1,57 @@
 // Import các module và service cần thiết
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ProductService, Product, ProductResponse, ProductDetail, ProductVariant } from '../services/product';
+import { ProductService, Product, ProductDetail, ProductVariant } from '../services/product';
 import { HttpClientModule } from '@angular/common/http';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { ProductInsertEdit } from '../product-insert-edit/product-insert-edit';
+
+interface ProductCreateUpdateData {
+  name: string;
+  description: string;
+  originalPrice?: number;
+  salePrice?: number;
+  price: number;
+  imageUrl: string;
+  status: boolean;
+  category: string;
+  productGroup?: string;
+  productCode: string;
+  stock: number;
+  productDetails?: ProductDetail[];
+  productVariants?: ProductVariant[];
+}
+
+interface ProductFormData {
+  id: number;
+  name: string;
+  description: string;
+  originalPrice?: number;
+  salePrice?: number;
+  price: number;
+  imageUrl: string;
+  status: boolean;
+  category: string;
+  productGroup?: string;
+  productCode: string;
+  stock: number;
+  sku?: string;
+  createdAt?: Date;
+  productDetails?: ProductDetail[];
+  productVariants?: ProductVariant[];
+}
+
+interface ErrorWithOriginal {
+  status?: number;
+  message?: string;
+  originalError?: {
+    error?: unknown;
+    status?: number;
+    message?: string;
+  };
+}
 
 // Interface mở rộng Product với các thuộc tính bổ sung
 interface ProductWithExtras extends Product {
@@ -56,7 +101,7 @@ export class ProductList implements OnInit, OnDestroy {
   // Modal thêm/sửa sản phẩm
   showModal: boolean = false;     // Hiển thị modal
   isEditing: boolean = false;     // Đang chỉnh sửa hay thêm mới
-  selectedProduct: ProductWithExtras = this.getEmptyProduct(); // Sản phẩm được chọn
+  selectedProduct: ProductFormData | null = null; // Sản phẩm được chọn
   selectedFile: File | null = null; // File ảnh được chọn
   previewImageUrl: string = '';   // URL preview ảnh (Base64)
   
@@ -83,12 +128,11 @@ export class ProductList implements OnInit, OnDestroy {
   // Math object để sử dụng trong template
   Math = Math;
 
-  // Constructor - inject ProductService và Router
-  constructor(
-    private productService: ProductService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {
+  private readonly productService = inject(ProductService);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
+
+  constructor() {
     // Setup search debouncing
     this.searchSubject.pipe(
       debounceTime(300),
@@ -124,7 +168,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Tải danh sách sản phẩm từ API với cache
-  loadProducts(forceReload: boolean = false) {
+  loadProducts() {
     this.isLoading = true;
     this.showSkeleton = true;
     this.error = '';
@@ -284,8 +328,8 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Tạo object sản phẩm rỗng cho form thêm mới
-  getEmptyProduct(): ProductWithExtras {
-    const emptyProduct = {
+  getEmptyProduct(): ProductFormData {
+    const emptyProduct: ProductFormData = {
       id: 0,
       name: '',
       description: '',
@@ -299,7 +343,6 @@ export class ProductList implements OnInit, OnDestroy {
       productCode: `PRD-${Date.now()}`,
       stock: 0,
       createdAt: new Date(),
-      sku: this.generateSKU(),
       productDetails: [],
       productVariants: []
     };
@@ -535,7 +578,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Track function cho index
-  trackByIndex(index: number, item: any): number {
+  trackByIndex(index: number): number {
     return index;
   }
 
@@ -601,7 +644,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Xử lý lỗi khi load hình ảnh
-  onImageError(event: any): void {
+  onImageError(event: Event): void {
     const img = event.target as HTMLImageElement;
     
     // Kiểm tra xem đã set fallback chưa để tránh infinite loop
@@ -667,7 +710,9 @@ export class ProductList implements OnInit, OnDestroy {
   // Xóa hình ảnh
   removeImage(event: Event): void {
     event.stopPropagation();
-    this.selectedProduct.imageUrl = '';
+    if (this.selectedProduct) {
+      this.selectedProduct.imageUrl = '';
+    }
     this.selectedFile = null;
     this.previewImageUrl = '';
     this.cdr.markForCheck();
@@ -725,6 +770,27 @@ export class ProductList implements OnInit, OnDestroy {
     return status ? 'Hoạt động' : 'Không hoạt động';
   }
 
+  // Convert ProductWithExtras to ProductFormData
+  private convertToProductFormData(product: ProductWithExtras): ProductFormData {
+    return {
+      id: product.id,
+      name: product.name,
+      description: product.description || '',
+      originalPrice: product.originalPrice,
+      salePrice: product.salePrice,
+      price: product.price,
+      imageUrl: product.imageUrl,
+      status: product.status,
+      category: product.category,
+      productGroup: product.productGroup,
+      productCode: product.productCode,
+      stock: product.stock,
+      createdAt: product.createdAt ? (product.createdAt instanceof Date ? product.createdAt : new Date(product.createdAt)) : undefined,
+      productDetails: product.productDetails,
+      productVariants: product.productVariants
+    };
+  }
+
   // Mở modal thêm sản phẩm mới
   openAddProductModal() {
     console.log('=== ADD PRODUCT MODAL OPENED ===');
@@ -762,11 +828,14 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Tạo SKU mới
   generateNewSKU() {
-    this.selectedProduct.sku = this.generateSKU();
+    if (this.selectedProduct) {
+      this.selectedProduct.sku = this.generateSKU();
+    }
   }
 
   // Thêm ProductDetail mới
   addProductDetail() {
+    if (!this.selectedProduct) return;
     const newDetail: ProductDetail = {
       id: 0,
       productId: this.selectedProduct.id,
@@ -785,12 +854,14 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Xóa ProductDetail
   removeProductDetail(index: number) {
+    if (!this.selectedProduct) return;
     this.productDetails.splice(index, 1);
     this.selectedProduct.productDetails = [...this.productDetails];
   }
 
   // Thêm ProductVariant mới
   addProductVariant() {
+    if (!this.selectedProduct) return;
     const newVariant: ProductVariant = {
       id: 0,
       productId: this.selectedProduct.id,
@@ -807,12 +878,14 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Xóa ProductVariant
   removeProductVariant(index: number) {
+    if (!this.selectedProduct) return;
     this.productVariants.splice(index, 1);
     this.selectedProduct.productVariants = [...this.productVariants];
   }
 
   // Mở modal chỉnh sửa sản phẩm
   editProduct(product: ProductWithExtras) {
+    this.selectedProduct = this.convertToProductFormData(product);
     console.log('=== EDIT PRODUCT CLICKED ===');
     console.log('Original product:', product);
     console.log('Current showModal state:', this.showModal);
@@ -833,7 +906,7 @@ export class ProductList implements OnInit, OnDestroy {
       productGroup: product.productGroup || 'Sản phẩm',
       productCode: product.productCode || `PRD-${Date.now()}`,
       stock: Number(product.stock) || 0,
-      createdAt: product.createdAt || new Date(),
+      createdAt: product.createdAt instanceof Date ? product.createdAt : (product.createdAt ? new Date(product.createdAt) : new Date()),
       sku: product.sku || this.generateSKU(),
       productDetails: product.productDetails || [],
       productVariants: product.productVariants || []
@@ -851,13 +924,15 @@ export class ProductList implements OnInit, OnDestroy {
       this.addProductVariant();
     }
     
-    console.log('Copied selectedProduct:', this.selectedProduct);
-    console.log('Data types:', {
-      id: typeof this.selectedProduct.id,
-      name: typeof this.selectedProduct.name,
-      price: typeof this.selectedProduct.price,
-      stock: typeof this.selectedProduct.stock
-    });
+    if (this.selectedProduct) {
+      console.log('Copied selectedProduct:', this.selectedProduct);
+      console.log('Data types:', {
+        id: typeof this.selectedProduct.id,
+        name: typeof this.selectedProduct.name,
+        price: typeof this.selectedProduct.price,
+        stock: typeof this.selectedProduct.stock
+      });
+    }
     
     this.showModal = true;
     this.previewImageUrl = '';
@@ -953,7 +1028,7 @@ export class ProductList implements OnInit, OnDestroy {
     event.stopPropagation();
     
     // Kiểm tra form validation
-    const form = (event.target as any).closest('form');
+    const form = (event.target as HTMLElement).closest('form');
     if (form && !form.checkValidity()) {
       console.log('Form is invalid, showing validation errors');
       form.reportValidity();
@@ -966,6 +1041,7 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Lưu sản phẩm (thêm mới hoặc cập nhật)
   saveProduct() {
+    if (!this.selectedProduct) return;
     console.log('=== SAVE PRODUCT CALLED ===');
     console.log('Is editing:', this.isEditing);
     console.log('Selected product:', this.selectedProduct);
@@ -1003,6 +1079,11 @@ export class ProductList implements OnInit, OnDestroy {
     try {
       const productData = this.prepareProductData();
       
+      // Ensure productGroup is always a string
+      if (!productData.productGroup) {
+        productData.productGroup = 'Sản phẩm';
+      }
+      
       console.log('Product data to send:', productData);
       console.log('Data types:', {
         name: typeof productData.name,
@@ -1028,6 +1109,10 @@ export class ProductList implements OnInit, OnDestroy {
   private validateProductData(): { isValid: boolean; message: string } {
     console.log('=== VALIDATING PRODUCT DATA ===');
     console.log('Selected product:', this.selectedProduct);
+    
+    if (!this.selectedProduct) {
+      return { isValid: false, message: 'Không có dữ liệu sản phẩm!' };
+    }
     
     // Validate tên sản phẩm
     if (!this.selectedProduct.name || !this.selectedProduct.name.trim()) {
@@ -1096,6 +1181,10 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Chuẩn bị dữ liệu sản phẩm để gửi lên server
   private prepareProductData() {
+    if (!this.selectedProduct) {
+      throw new Error('Không có dữ liệu sản phẩm!');
+    }
+    
     // Đảm bảo dữ liệu được chuẩn hóa trước khi gửi
     const name = this.selectedProduct.name?.trim() || '';
     const description = this.selectedProduct.description?.trim() || '';
@@ -1109,7 +1198,7 @@ export class ProductList implements OnInit, OnDestroy {
     const productCode = this.selectedProduct.productCode?.trim() || `PRD-${Date.now()}`;
     const status = this.selectedProduct.status !== undefined ? this.selectedProduct.status : true;
     
-    const productData = {
+    const productData: ProductCreateUpdateData = {
       name: name,
       description: description,
       originalPrice: originalPrice,
@@ -1118,12 +1207,17 @@ export class ProductList implements OnInit, OnDestroy {
       imageUrl: imageUrl,
       status: status,
       category: category,
-      productGroup: productGroup,
+      productGroup: productGroup || 'Sản phẩm',
       productCode: productCode,
       stock: stock,
       productDetails: this.productDetails,
       productVariants: this.productVariants
     };
+    
+    // Ensure productGroup is always a string (not undefined)
+    if (!productData.productGroup) {
+      productData.productGroup = 'Sản phẩm';
+    }
     
     console.log('=== PREPARED PRODUCT DATA ===');
     console.log('Raw selectedProduct:', this.selectedProduct);
@@ -1158,7 +1252,8 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Cập nhật sản phẩm hiện có
-  private updateExistingProduct(productData: any) {
+  private updateExistingProduct(productData: ProductCreateUpdateData) {
+    if (!this.selectedProduct) return;
     console.log('=== UPDATE EXISTING PRODUCT ===');
     console.log('Product ID:', this.selectedProduct.id);
     console.log('Update data:', productData);
@@ -1173,7 +1268,8 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Thực hiện update sản phẩm
-  private performUpdate(productData: any) {
+  private performUpdate(productData: ProductCreateUpdateData) {
+    if (!this.selectedProduct) return;
     console.log('=== PERFORMING UPDATE ===');
     console.log('Product ID:', this.selectedProduct.id);
     console.log('Update data:', productData);
@@ -1216,7 +1312,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Tạo sản phẩm mới với error handling cải tiến
-  private createNewProduct(productData: any) {
+  private createNewProduct(productData: ProductCreateUpdateData) {
     console.log('=== CREATING NEW PRODUCT ===');
     console.log('Product data:', productData);
     
@@ -1274,8 +1370,9 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Cập nhật sản phẩm trong danh sách
-  private updateProductInList(updatedProduct: Product, productData: any) {
-    const index = this.products.findIndex(p => p.id === this.selectedProduct.id);
+  private updateProductInList(updatedProduct: Product, productData: ProductCreateUpdateData) {
+    if (!this.selectedProduct) return;
+    const index = this.products.findIndex(p => p.id === this.selectedProduct!.id);
     if (index !== -1) {
       // Cập nhật tất cả các field và giữ lại các field bổ sung
       this.products[index] = { 
@@ -1295,17 +1392,17 @@ export class ProductList implements OnInit, OnDestroy {
   private addProductToList(newProduct: Product) {
     const productWithExtras: ProductWithExtras = {
       ...newProduct,
-      sku: this.selectedProduct.sku, // Sử dụng SKU đã tạo
+      sku: this.selectedProduct?.sku || this.generateSKU(), // Sử dụng SKU đã tạo
       category: newProduct.category || this.getCategoryFromName(newProduct.name),
       status: newProduct.status !== undefined ? newProduct.status : (newProduct.stock > 0),
       createdAt: newProduct.createdAt ? new Date(newProduct.createdAt) : new Date(),
-      imageUrl: this.selectedProduct.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'
+      imageUrl: this.selectedProduct?.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'
     };
     this.products.push(productWithExtras);
   }
 
   // Xử lý lỗi khi update sản phẩm
-  private handleUpdateError(error: any) {
+  private handleUpdateError(error: ErrorWithOriginal) {
     let errorMessage = '';
     
     console.log('Handle update error:', error);
@@ -1341,7 +1438,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Xử lý lỗi khi tạo sản phẩm mới
-  private handleCreateError(error: any) {
+  private handleCreateError(error: ErrorWithOriginal) {
     let errorMessage = '';
     
     console.log('Handle create error:', error);
@@ -1360,15 +1457,15 @@ export class ProductList implements OnInit, OnDestroy {
       errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
     } else if (error.status === 0) {
       errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
-    } else if (error.originalError && error.originalError.error) {
+      } else if (error.originalError && error.originalError.error) {
       // Hiển thị lỗi chi tiết từ server
       const serverError = error.originalError.error;
       if (typeof serverError === 'string') {
         errorMessage = serverError;
-      } else if (serverError.message) {
-        errorMessage = serverError.message;
-      } else if (serverError.error) {
-        errorMessage = serverError.error;
+      } else if (serverError && typeof serverError === 'object' && 'message' in serverError) {
+        errorMessage = (serverError as { message: string }).message;
+      } else if (serverError && typeof serverError === 'object' && 'error' in serverError) {
+        errorMessage = (serverError as { error: string }).error;
       } else {
         errorMessage = 'Có lỗi xảy ra khi tạo sản phẩm mới.';
       }
@@ -1407,7 +1504,7 @@ export class ProductList implements OnInit, OnDestroy {
     console.log('=== MODAL CLOSED FROM CHILD ===');
     this.closeModal();
   }
-  onProductSaved(savedProduct: any) {
+  onProductSaved(savedProduct: Product | ProductFormData) {
     console.log('=== PRODUCT SAVED FROM CHILD ===');
     console.log('Saved product:', savedProduct);
     console.log('Is editing:', this.isEditing);
@@ -1449,7 +1546,7 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Làm mới dữ liệu (force reload)
   refreshProducts() {
-    this.loadProducts(true); // Force reload từ API
+    this.loadProducts(); // Force reload từ API
   }
 
 

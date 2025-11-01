@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
@@ -67,8 +67,7 @@ export interface InventoryStats {
 })
 export class InventoryService {
   private apiUrl = 'http://localhost:5000/api/Inventories';
-
-  constructor(private http: HttpClient) { }
+  private readonly http = inject(HttpClient);
 
   // Lấy tất cả inventory items
   getAllInventoryItems(): Observable<ProcessedInventoryItem[]> {

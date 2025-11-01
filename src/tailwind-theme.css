@@ -172,6 +172,98 @@
   [role="button"]:not(:disabled) {
     cursor: pointer;
   }
+  body {
+    @apply relative font-normal font-outfit z-1 bg-white;
+  }
+}
+
+@utility menu-item {
+  @apply relative flex items-center gap-2 px-3 py-2.5 font-medium text-theme-sm transition-colors;
+  border-radius: 0.5rem;
+  justify-content: flex-start;
+}
+
+@utility menu-item-active {
+  background-color: #EEF2FF;
+  color: #4F46E5;
+  border-radius: 0.5rem;
+}
+
+@utility menu-item-inactive {
+  @apply text-gray-700 hover:bg-gray-100 group-hover:text-gray-700;
+}
+
+@utility menu-item-icon {
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400;
+}
+
+@utility menu-item-icon-active {
+  @apply text-brand-500;
+}
+
+@utility menu-item-icon-size {
+  & svg {
+    @apply !size-6 flex-shrink-0;
+  }
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@utility menu-item-icon-inactive {
+  @apply text-gray-700 group-hover:text-gray-700;
+}
+
+@utility menu-item-arrow {
+  @apply relative;
+}
+
+@utility menu-item-arrow-active {
+  @apply rotate-180 text-brand-500 dark:text-brand-400;
+}
+
+@utility menu-item-arrow-inactive {
+  @apply text-gray-500 group-hover:text-gray-700 dark:text-gray-400 dark:group-hover:text-gray-300;
+}
+
+@utility menu-dropdown-item {
+  @apply relative flex items-center gap-2 px-3 py-2.5 text-theme-sm font-medium transition-colors;
+  border-radius: 0.5rem;
+  justify-content: center;
+}
+
+@utility menu-dropdown-item-active {
+  background-color: #EEF2FF;
+  color: #4F46E5;
+}
+
+@utility menu-dropdown-item-inactive {
+  @apply text-gray-700 hover:bg-gray-100;
+}
+
+@utility menu-dropdown-badge {
+  @apply text-white block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase leading-none;
+  background-color: #12b76a;
+}
+
+@utility menu-dropdown-badge-active {
+  background-color: #12b76a;
+}
+
+@utility menu-dropdown-badge-inactive {
+  background-color: #12b76a;
+}
+
+@utility menu-dropdown-badge-pro {
+  @apply text-brand-600 dark:text-brand-500 block rounded-full px-2.5 py-0.5 text-xs font-medium uppercase;
+}
+
+@utility menu-dropdown-badge-pro-active {
+  @apply bg-brand-100 dark:bg-brand-500/20;
+}
+
+@utility menu-dropdown-badge-pro-inactive {
+  @apply bg-brand-50 group-hover:bg-brand-100 dark:bg-brand-500/15 dark:group-hover:bg-brand-500/20;
 }
 
 @utility no-scrollbar {
@@ -180,5 +272,21 @@
   }
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    @apply size-1.5;
+  }
+  &::-webkit-scrollbar-track {
+    @apply rounded-full;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply bg-gray-200 rounded-full dark:bg-gray-700;
+  }
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #344054;
 }
 

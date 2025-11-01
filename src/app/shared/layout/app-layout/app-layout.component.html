@@ -1,0 +1,23 @@
+<div class="min-h-screen flex">
+  <!-- Sidebar Container - responsive width based on expanded state -->
+  <div 
+    class="sidebar-container"
+    [ngClass]="{
+      'sidebar-expanded': (isExpanded$ | async) || (isHovered$ | async),
+      'sidebar-collapsed': (isExpanded$ | async) === false && (isHovered$ | async) === false && (isMobileOpen$ | async) === false
+    }"
+  >
+    <app-sidebar></app-sidebar>
+    <app-backdrop></app-backdrop>
+  </div>
+  
+  <!-- Main Content Container - responsive width, fills remaining space -->
+  <div class="main-content-container">
+    <!-- app header start -->
+    <app-header/>
+    <!-- app header end -->
+    <div class="p-4 mx-auto max-w-(--breakpoint-2xl) md:p-6">
+      <router-outlet></router-outlet>
+    </div>
+  </div>
+</div>

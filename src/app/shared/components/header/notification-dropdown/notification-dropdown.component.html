@@ -1,0 +1,40 @@
+<div class="relative">
+  <button
+    (click)="toggleDropdown()"
+    class="relative flex items-center justify-center w-9 h-9 rounded-lg text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800 transition-colors"
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M12 2C8.13 2 5 5.13 5 9C5 14.25 2 16 2 16H22C22 16 19 14.25 19 9C19 5.13 15.87 2 12 2Z"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+      <path
+        d="M9 16V18C9 19.1 9.9 20 11 20H13C14.1 20 15 19.1 15 18V16"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      />
+    </svg>
+    <span class="absolute top-0.5 right-0.5 block h-2 w-2 rounded-full bg-red-500"></span>
+  </button>
+  
+  @if (isOpen) {
+    <app-dropdown [isOpen]="isOpen" (closed)="closeDropdown()">
+      <div class="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50">
+        <div class="p-3 border-b border-gray-200 dark:border-gray-700">
+          <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Thông báo</h3>
+        </div>
+        <div class="max-h-96 overflow-y-auto">
+          <div class="p-4 text-center text-sm text-gray-500 dark:text-gray-400">
+            Không có thông báo mới
+          </div>
+        </div>
+      </div>
+    </app-dropdown>
+  }
+</div>
+

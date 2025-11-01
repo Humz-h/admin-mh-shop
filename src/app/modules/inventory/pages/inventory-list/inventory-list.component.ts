@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Inventory, InventoryService } from '../../services/inventory.service';
 import { catchError, timeout } from 'rxjs/operators';
@@ -20,11 +20,8 @@ export class InventoryListComponent implements OnInit, OnDestroy {
   showSkeleton = true;
   
   private destroy$ = new Subject<void>();
-
-  constructor(
-    private inventoryService: InventoryService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private readonly inventoryService = inject(InventoryService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.loadInventories();
@@ -67,14 +64,14 @@ export class InventoryListComponent implements OnInit, OnDestroy {
         } else if (Array.isArray(data)) {
           this.inventories = data
             .filter(item => item != null && typeof item === 'object')
-            .map((item: any) => ({
+            .map((item: Inventory) => ({
               ...item,
               quantity: Number(item.quantity) || 0,
               daysInStock: Number(item.daysInStock) || 0,
               productId: item.productId || item.id || 0
             }));
-        } else if (data && typeof data === 'object') {
-          const inventoryData = data as any;
+        } else if (data && typeof data === 'object' && !Array.isArray(data)) {
+          const inventoryData = data as Inventory;
           this.inventories = [{
             ...inventoryData,
             quantity: Number(inventoryData.quantity) || 0,
@@ -144,7 +141,7 @@ export class InventoryListComponent implements OnInit, OnDestroy {
     this.loadInventories();
   }
 
-  trackByProductId(index: number, item: Inventory): any {
+  trackByProductId(index: number, item: Inventory): number {
     return item.id || item.productId || index;
   }
 

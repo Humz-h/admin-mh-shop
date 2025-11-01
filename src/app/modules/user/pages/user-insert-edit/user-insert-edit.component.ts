@@ -1,8 +1,19 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewChecked } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef, AfterViewChecked, OnDestroy, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Customer, CustomerService } from '../../../../services/customer.service';
 import { Subject, takeUntil } from 'rxjs';
+
+interface CustomerForm extends Partial<Customer> {
+  id: number;
+  username: string;
+  email: string;
+  fullName: string;
+  phone: string;
+  role: string;
+  password: string;
+  confirmPassword: string;
+}
 
 @Component({
   selector: 'app-user-insert-edit',
@@ -12,14 +23,14 @@ import { Subject, takeUntil } from 'rxjs';
   styleUrls: ['./user-insert-edit.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
 })
-export class UserInsertEditComponent implements OnInit, OnChanges, AfterViewChecked {
+export class UserInsertEditComponent implements OnInit, OnChanges, AfterViewChecked, OnDestroy {
   @Input() showModal: boolean = false;
   @Input() isEditing: boolean = false;
   @Input() selectedCustomer: Customer | null = null;
   @Output() modalClosed = new EventEmitter<void>();
   @Output() customerSaved = new EventEmitter<Customer>();
 
-  customer: any = {
+  customer: CustomerForm = {
     id: 0,
     username: '',
     email: '',
@@ -35,11 +46,8 @@ export class UserInsertEditComponent implements OnInit, OnChanges, AfterViewChec
   private dataLoaded: boolean = false;
   
   private destroy$ = new Subject<void>();
-
-  constructor(
-    private customerService: CustomerService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private readonly customerService = inject(CustomerService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     // Always start with empty form

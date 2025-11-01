@@ -1,6 +1,6 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, of } from 'rxjs';
+import { Observable, of } from 'rxjs';
 import { map, catchError, shareReplay } from 'rxjs/operators';
 
 export interface OrderItem {
@@ -32,21 +32,25 @@ export interface OrderResponse {
   pageSize: number;
 }
 
+interface CacheEntry {
+  data: Order[] | Order;
+  timestamp: number;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class OrderService {
   private apiUrl = 'http://localhost:5000/api/Orders';
-  private cache = new Map<string, any>();
+  private cache = new Map<string, CacheEntry>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
   private loadingStates = new Map<string, Observable<Order[]>>();
-
-  constructor(private http: HttpClient) { }
+  private readonly http = inject(HttpClient);
 
   // Lấy tất cả đơn hàng với pagination
   getOrders(page: number = 1, pageSize: number = 20, customerId?: number): Observable<Order[]> {
     const cacheKey = `orders_page_${page}_pageSize_${pageSize}_customerId_${customerId || 'all'}`;
-    const cached = this.getCachedData(cacheKey);
+    const cached = this.getCachedOrders(cacheKey);
     
     if (cached) {
       return of(cached);
@@ -86,7 +90,7 @@ export class OrderService {
   // Lấy đơn hàng theo ID
   getOrderById(id: number): Observable<Order> {
     const cacheKey = `order_${id}`;
-    const cached = this.getCachedData(cacheKey);
+    const cached = this.getCachedSingleOrder(cacheKey);
     
     if (cached) {
       return of(cached);
@@ -120,16 +124,31 @@ export class OrderService {
   }
 
   // Cache management
-  private getCachedData(key: string): any {
+  private getCachedOrders(key: string): Order[] | null {
     const cached = this.cache.get(key);
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-      return cached.data;
+      const data = cached.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
     }
     this.cache.delete(key);
     return null;
   }
 
-  private setCachedData(key: string, data: any): void {
+  private getCachedSingleOrder(key: string): Order | null {
+    const cached = this.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+      const data = cached.data;
+      if (data && typeof data === 'object' && !Array.isArray(data)) {
+        return data as Order;
+      }
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  private setCachedData(key: string, data: Order[] | Order): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now()

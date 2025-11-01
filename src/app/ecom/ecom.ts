@@ -1,4 +1,4 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 
 @Component({
@@ -8,7 +8,7 @@ import { Router, RouterLink } from '@angular/router';
   styleUrl: './ecom.scss'
 })
 export class Ecom {
-  constructor(private router: Router) {}
+  private readonly router = inject(Router);
 
   navigateToProducts() {
     this.router.navigate(['/products']);

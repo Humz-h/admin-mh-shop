@@ -1,0 +1,9 @@
+@if (to) {
+  <a [routerLink]="to" [ngClass]="combinedClasses" (click)="handleClick($event)">
+    <ng-content></ng-content>
+  </a>
+} @else {
+  <button type="button" [ngClass]="combinedClasses" (click)="handleClick($event)">
+    <ng-content></ng-content>
+  </button>
+}

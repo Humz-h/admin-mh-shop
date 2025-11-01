@@ -1,8 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map, catchError } from 'rxjs/operators';
-import { of } from 'rxjs';
 
 export interface Product {
   id: number;
@@ -60,39 +59,65 @@ export interface InventoryTransaction {
   };
 }
 
+interface RawInventoryItem {
+  id?: number;
+  productId?: number;
+  quantity?: number | string;
+  lastUpdated?: string;
+  lastImportDate?: string;
+  status?: boolean;
+  daysInStock?: number;
+  productName?: string;
+  productCode?: string;
+  product?: {
+    id?: number;
+    name?: string;
+    productName?: string;
+    productCode?: string;
+    product_code?: string;
+    price?: number;
+    salePrice?: number;
+    stock?: number;
+  };
+}
+
+interface InventoryApiResponse {
+  success?: boolean;
+  data?: RawInventoryItem[] | RawInventoryItem;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class InventoryService {
   private apiUrl = 'http://localhost:5000/api/Inventory';
   private transactionUrl = 'http://localhost:5000/api/InventoryTransaction';
-
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   getInventories(): Observable<Inventory[]> {
-    return this.http.get<any>(this.apiUrl).pipe(
+    return this.http.get<InventoryApiResponse | RawInventoryItem[] | RawInventoryItem>(this.apiUrl).pipe(
       map(response => {
         if (!response) {
           return [];
         }
         
-        let items: any[] = [];
+        let items: RawInventoryItem[] = [];
         
         if (Array.isArray(response)) {
           items = response;
-        } else if (response.success && Array.isArray(response.data)) {
-          items = response.data;
-        } else if (response.data && Array.isArray(response.data)) {
-          items = response.data;
-        } else if (typeof response === 'object' && !Array.isArray(response)) {
-          items = [response];
+        } else if ('success' in response && response.success && Array.isArray(response.data)) {
+          items = response.data as RawInventoryItem[];
+        } else if ('data' in response && Array.isArray(response.data)) {
+          items = response.data as RawInventoryItem[];
+        } else if (typeof response === 'object' && !Array.isArray(response) && !('success' in response)) {
+          items = [response as RawInventoryItem];
         }
         
         if (items.length === 0) {
           return [];
         }
         
-        return items.map((item: any) => this.mapToInventory(item)).filter(item => item !== null && item !== undefined);
+        return items.map((item: RawInventoryItem) => this.mapToInventory(item)).filter((item): item is Inventory => item !== null);
       }),
       catchError(error => {
         throw error;
@@ -100,9 +125,9 @@ export class InventoryService {
     );
   }
 
-  private mapToInventory(item: any): Inventory {
+  private mapToInventory(item: RawInventoryItem): Inventory | null {
     if (!item || typeof item !== 'object') {
-      return null as any;
+      return null;
     }
 
     const dateValue = item.lastUpdated || item.lastImportDate;
@@ -127,7 +152,7 @@ export class InventoryService {
     const productCode = item.productCode || product.productCode || product.product_code || item.product?.productCode || `PRD-${item.productId || item.id || ''}`;
 
     const quantity = Number(item.quantity) || 0;
-    const productId = item.productId || item.id;
+    const productId = item.productId || item.id || 0;
 
     return {
       id: item.id || 0,

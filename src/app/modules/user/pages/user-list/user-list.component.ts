@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Customer, CustomerService } from '../../../../services/customer.service';
 import { UserInsertEditComponent } from '../user-insert-edit/user-insert-edit.component';
@@ -26,11 +26,8 @@ export class UserListComponent implements OnInit, OnDestroy {
   selectedCustomer: Customer | null = null;
   
   private destroy$ = new Subject<void>();
-
-  constructor(
-    private customerService: CustomerService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private readonly customerService = inject(CustomerService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.loadCustomers();
@@ -70,7 +67,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       next: (data) => {
         if (Array.isArray(data)) {
           // Create completely new array to trigger change detection
-          const newCustomers = data.map((customer: any) => ({
+          const newCustomers = data.map((customer: Customer) => ({
             id: customer.id,
             username: customer.username || '',
             email: customer.email || '',
@@ -122,7 +119,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.loadCustomers();
   }
 
-  trackByUserId(index: number, item: Customer): any {
+  trackByUserId(index: number, item: Customer): number {
     return item.id || index;
   }
 
@@ -242,7 +239,7 @@ export class UserListComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  onCustomerSaved(customer: Customer) {
+  onCustomerSaved(): void {
     // Ensure modal state is reset
     this.showModal = false;
     this.isEditing = false;

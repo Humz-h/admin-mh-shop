@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -26,12 +26,9 @@ export class OrderList implements OnInit, OnDestroy {
   private searchSubject = new Subject<string>();
   private statusSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
-
-  constructor(
-    private orderService: OrderService,
-    private router: Router,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private readonly orderService = inject(OrderService);
+  private readonly router = inject(Router);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.setupDebouncedSearch();

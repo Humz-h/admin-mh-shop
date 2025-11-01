@@ -1,0 +1,13 @@
+<div class="flex gap-2">
+  @for (tab of tabs; track tab) {
+    <button
+      (click)="selectTab(tab)"
+      [class.active]="activeTab === tab"
+      class="px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+    >
+      {{ tab }}
+    </button>
+  }
+</div>
+
+

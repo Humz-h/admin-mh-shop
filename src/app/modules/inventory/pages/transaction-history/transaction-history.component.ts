@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { InventoryService, InventoryTransaction } from '../../services/inventory.service';
 
@@ -13,8 +13,7 @@ export class TransactionHistoryComponent implements OnInit {
   transactions: InventoryTransaction[] = [];
   loading = false;
   errorMessage = '';
-
-  constructor(private inventoryService: InventoryService) {}
+  private readonly inventoryService = inject(InventoryService);
 
   ngOnInit(): void {
     this.loadTransactions();

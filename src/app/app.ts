@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { Component, signal, inject } from '@angular/core';
 import { RouterOutlet, Router } from '@angular/router';
 
 @Component({
@@ -9,8 +9,7 @@ import { RouterOutlet, Router } from '@angular/router';
 })
 export class App {
   protected readonly title = signal('admin-mh-shop');
-
-  constructor(private router: Router) {}
+  private readonly router = inject(Router);
 
   navigateToProducts() {
     this.router.navigate(['/products']);

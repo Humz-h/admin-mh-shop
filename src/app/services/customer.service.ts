@@ -1,8 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map, catchError, timeout } from 'rxjs/operators';
-import { of } from 'rxjs';
 
 export interface Customer {
   id: number;
@@ -20,8 +19,7 @@ export interface Customer {
 })
 export class CustomerService {
   private apiUrl = 'http://localhost:5000/api/Customers';
-
-  constructor(private http: HttpClient) {}
+  private readonly http = inject(HttpClient);
 
   getCustomers(page: number = 1, pageSize: number = 20): Observable<Customer[]> {
     const params = new HttpParams()
@@ -81,7 +79,7 @@ export class CustomerService {
     );  
   }
 
-  deleteCustomer(id: number): Observable<any> {
+  deleteCustomer(id: number): Observable<{ success: boolean }> {
     // API might return success message, empty response, or 204 No Content
     // Accept any response type for flexibility
     return this.http.delete(`${this.apiUrl}/${id}`, { observe: 'response' }).pipe(
@@ -92,7 +90,7 @@ export class CustomerService {
         if (response.status === 200 || response.status === 204) {
           return { success: true };
         }
-        return response.body || { success: true };
+        return (response.body as { success: boolean }) || { success: true };
       }),
       catchError(error => {
         throw error;

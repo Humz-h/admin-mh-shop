@@ -1,8 +1,42 @@
-import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, OnChanges, SimpleChanges, ChangeDetectionStrategy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ProductService, Product, ProductDetail, ProductVariant } from '../services/product';
+import { ProductService, ProductDetail, ProductVariant } from '../services/product';
 import { UploadService } from '../services/upload.service';
+
+interface ProductFormData {
+  id: number;
+  name: string;
+  description: string;
+  originalPrice?: number;
+  salePrice?: number;
+  price: number;
+  imageUrl: string;
+  status: boolean;
+  category: string;
+  productGroup?: string;
+  productCode: string;
+  stock: number;
+  createdAt?: Date;
+  productDetails?: ProductDetail[];
+  productVariants?: ProductVariant[];
+}
+
+interface ProductCreateUpdateData {
+  name: string;
+  description: string;
+  originalPrice: number;
+  salePrice: number;
+  price: number;
+  imageUrl: string;
+  status: boolean;
+  category: string;
+  productGroup: string;
+  productCode: string;
+  stock: number;
+  productDetails: ProductDetail[];
+  productVariants: ProductVariant[];
+}
 
 @Component({
   selector: 'app-product-insert-edit',
@@ -14,12 +48,26 @@ import { UploadService } from '../services/upload.service';
 export class ProductInsertEdit implements OnInit, OnChanges {
   @Input() showModal: boolean = false;
   @Input() isEditing: boolean = false;
-  @Input() selectedProduct: any = null;
+  @Input() selectedProduct: ProductFormData | null = null;
   @Output() modalClosed = new EventEmitter<void>();
-  @Output() productSaved = new EventEmitter<any>();
+  @Output() productSaved = new EventEmitter<ProductFormData>();
 
   // Form data
-  product: any = {};
+  product: ProductFormData = {
+    id: 0,
+    name: '',
+    description: '',
+    originalPrice: 0,
+    salePrice: 0,
+    price: 0,
+    imageUrl: '',
+    status: true,
+    category: 'Điện tử',
+    productGroup: 'Sản phẩm',
+    productCode: `PRD-${Date.now()}`,
+    stock: 0,
+    createdAt: new Date()
+  };
   productDetails: ProductDetail[] = [];
   productVariants: ProductVariant[] = [];
   discountPercentage: number = 0;
@@ -33,11 +81,9 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   isUploading: boolean = false;
   uploadError: string = '';
 
-  constructor(
-    private productService: ProductService,
-    private uploadService: UploadService,
-    private cdr: ChangeDetectorRef
-  ) {}
+  private readonly productService = inject(ProductService);
+  private readonly uploadService = inject(UploadService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit() {
     this.initializeProduct();
@@ -91,7 +137,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       productCode: `PRD-${Date.now()}`,
       stock: 0,
       createdAt: new Date()
-    };
+    } as ProductFormData;
     
     this.productDetails = [];
     this.productVariants = [];
@@ -106,7 +152,27 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     console.log('=== LOADING PRODUCT DATA FOR EDIT ===');
     console.log('Selected product:', this.selectedProduct);
     
-    this.product = { ...this.selectedProduct };
+    if (!this.selectedProduct) {
+      return;
+    }
+    
+    this.product = {
+      id: this.selectedProduct.id || 0,
+      name: this.selectedProduct.name || '',
+      description: this.selectedProduct.description || '',
+      originalPrice: this.selectedProduct.originalPrice || 0,
+      salePrice: this.selectedProduct.salePrice || 0,
+      price: this.selectedProduct.price || 0,
+      imageUrl: this.selectedProduct.imageUrl || '',
+      status: this.selectedProduct.status !== undefined ? this.selectedProduct.status : true,
+      category: this.selectedProduct.category || 'Điện tử',
+      productGroup: this.selectedProduct.productGroup || 'Sản phẩm',
+      productCode: this.selectedProduct.productCode || '',
+      stock: this.selectedProduct.stock || 0,
+      createdAt: this.selectedProduct.createdAt ? (this.selectedProduct.createdAt instanceof Date ? this.selectedProduct.createdAt : new Date(this.selectedProduct.createdAt)) : new Date(),
+      productDetails: this.selectedProduct.productDetails,
+      productVariants: this.selectedProduct.productVariants
+    } as ProductFormData;
     this.productDetails = [...(this.selectedProduct.productDetails || [])];
     this.productVariants = [...(this.selectedProduct.productVariants || [])];
     
@@ -316,7 +382,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     event.preventDefault();
     event.stopPropagation();
     
-    const form = (event.target as any).closest('form');
+    const form = (event.target as HTMLElement).closest('form');
     if (form && !form.checkValidity()) {
       console.log('Form validation failed');
       form.reportValidity();
@@ -403,7 +469,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   }
 
   // Prepare data for API
-  prepareProductData() {
+  prepareProductData(): ProductCreateUpdateData {
     const productData = {
       name: this.product.name?.trim() || '',
       description: this.product.description?.trim() || '',
@@ -424,7 +490,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   }
 
   // Create product
-  createProduct(productData: any) {
+  createProduct(productData: ProductCreateUpdateData) {
     console.log('=== CREATE PRODUCT CALLED ===');
     console.log('Product data:', productData);
     console.log('Product ID:', this.product.id);
@@ -438,7 +504,24 @@ export class ProductInsertEdit implements OnInit, OnChanges {
         this.cdr.markForCheck();
         
         setTimeout(() => {
-          this.productSaved.emit(newProduct);
+          const productFormData: ProductFormData = {
+            id: newProduct.id,
+            name: newProduct.name,
+            description: newProduct.description,
+            originalPrice: newProduct.originalPrice || 0,
+            salePrice: newProduct.salePrice || 0,
+            price: newProduct.price,
+            imageUrl: newProduct.imageUrl,
+            status: newProduct.status,
+            category: newProduct.category,
+            productGroup: newProduct.productGroup || 'Sản phẩm',
+            productCode: newProduct.productCode,
+            stock: newProduct.stock,
+            createdAt: newProduct.createdAt ? (newProduct.createdAt instanceof Date ? newProduct.createdAt : new Date(newProduct.createdAt)) : new Date(),
+            productDetails: newProduct.productDetails,
+            productVariants: newProduct.productVariants
+          };
+          this.productSaved.emit(productFormData);
           this.closeModal();
         }, 1500);
       },
@@ -451,7 +534,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   }
 
   // Update product
-  updateProduct(productData: any) {
+  updateProduct(productData: ProductCreateUpdateData) {
     console.log('=== UPDATE PRODUCT CALLED ===');
     console.log('Product ID:', this.product.id);
     console.log('Product data:', productData);
@@ -465,7 +548,24 @@ export class ProductInsertEdit implements OnInit, OnChanges {
         this.cdr.markForCheck();
         
         setTimeout(() => {
-          this.productSaved.emit(updatedProduct);
+          const productFormData: ProductFormData = {
+            id: updatedProduct.id,
+            name: updatedProduct.name,
+            description: updatedProduct.description,
+            originalPrice: updatedProduct.originalPrice || 0,
+            salePrice: updatedProduct.salePrice || 0,
+            price: updatedProduct.price,
+            imageUrl: updatedProduct.imageUrl,
+            status: updatedProduct.status,
+            category: updatedProduct.category,
+            productGroup: updatedProduct.productGroup || 'Sản phẩm',
+            productCode: updatedProduct.productCode,
+            stock: updatedProduct.stock,
+            createdAt: updatedProduct.createdAt ? (updatedProduct.createdAt instanceof Date ? updatedProduct.createdAt : new Date(updatedProduct.createdAt)) : new Date(),
+            productDetails: updatedProduct.productDetails,
+            productVariants: updatedProduct.productVariants
+          };
+          this.productSaved.emit(productFormData);
           this.closeModal();
         }, 1000);
       },
@@ -478,7 +578,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   }
 
   // Error handling
-  handleCreateError(error: any) {
+  handleCreateError(error: { status?: number; message?: string }) {
     this.isSaving = false;
     let errorMessage = 'Có lỗi xảy ra khi tạo sản phẩm mới.';
     
@@ -494,7 +594,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     this.cdr.markForCheck();
   }
 
-  handleUpdateError(error: any) {
+  handleUpdateError(error: { status?: number; message?: string }) {
     this.isSaving = false;
     let errorMessage = 'Có lỗi xảy ra khi cập nhật sản phẩm.';
     
@@ -589,7 +689,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     this.uploadService.uploadProductImage(this.selectedFile).subscribe({
       next: (response) => {
         this.isUploading = false;
-        this.product.imageUrl = response.imageUrl;
+        this.product.imageUrl = response.url;
         this.saveSuccess = 'Upload ảnh thành công!';
         this.cdr.markForCheck();
         
@@ -599,7 +699,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
           this.cdr.markForCheck();
         }, 3000);
       },
-      error: (error) => {
+      error: () => {
         this.isUploading = false;
         this.uploadError = 'Có lỗi xảy ra khi upload ảnh. Vui lòng thử lại!';
         this.cdr.markForCheck();
@@ -645,7 +745,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   }
 
   // Track functions
-  trackByIndex(index: number, item: any): number {
+  trackByIndex(index: number): number {
     return index;
   }
 }

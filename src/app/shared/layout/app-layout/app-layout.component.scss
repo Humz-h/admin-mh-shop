@@ -1,0 +1,64 @@
+:host {
+  display: block;
+  width: 100%;
+  overflow-x: hidden;
+}
+
+// Sidebar container - responsive width
+.sidebar-container {
+  position: relative;
+  min-width: 0;
+  flex-shrink: 0;
+  z-index: 10;
+  transition: width 0.3s ease-in-out;
+  min-height: 100vh;
+  height: 100%;
+  background-color: #ffffff;
+}
+
+// Main content container - fills remaining space
+.main-content-container {
+  position: relative;
+  min-width: 0;
+  flex: 1;
+  overflow-x: hidden;
+  transition: width 0.3s ease-in-out;
+  background-color: #ffffff;
+}
+
+// On mobile (< 1280px), sidebar overlay, content full width
+@media (max-width: 1279px) {
+  .sidebar-container {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    z-index: 50;
+    width: auto;
+  }
+  
+  .main-content-container {
+    width: 100%;
+    margin-left: 0;
+  }
+}
+
+// On desktop (>= 1280px), responsive sidebar and content
+@media (min-width: 1280px) {
+  // When sidebar is expanded
+  .sidebar-container.sidebar-expanded {
+    width: 20%;
+  }
+  
+  // When sidebar is collapsed
+  .sidebar-container.sidebar-collapsed {
+    width: 90px;
+  }
+  
+  // Content automatically fills remaining space with flex: 1
+  .main-content-container {
+    width: auto;
+    flex: 1;
+  }
+}
+

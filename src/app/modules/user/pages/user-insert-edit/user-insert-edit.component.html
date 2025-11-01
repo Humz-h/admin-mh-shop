@@ -1,9 +1,9 @@
 <!-- User Insert/Edit Modal -->
-<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()">
-  <div class="modal-content" (click)="$event.stopPropagation()">
+<div class="modal-overlay" *ngIf="showModal" (click)="closeModal()" (keydown.escape)="closeModal()" tabindex="0" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-content" (click)="$event.stopPropagation()" (keydown.escape)="closeModal()" tabindex="-1" role="document">
     <div class="modal-header">
-      <h2>{{ isEditing ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới' }}</h2>
-      <button class="modal-close" (click)="closeModal()" type="button">×</button>
+      <h2 id="modal-title">{{ isEditing ? 'Chỉnh sửa người dùng' : 'Thêm người dùng mới' }}</h2>
+      <button class="modal-close" (click)="closeModal()" type="button" aria-label="Đóng modal">×</button>
     </div>
     
     <form class="user-form" #userForm="ngForm" (ngSubmit)="onSaveCustomer($event)">

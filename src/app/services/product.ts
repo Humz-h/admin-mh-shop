@@ -1,7 +1,18 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, BehaviorSubject, of, throwError } from 'rxjs';
-import { map, catchError, shareReplay, timeout, retry, retryWhen, delay, take, switchMap } from 'rxjs/operators';
+import { Observable, of, throwError } from 'rxjs';
+import { map, catchError, shareReplay, timeout, retryWhen, delay, take } from 'rxjs/operators';
+
+interface CacheEntry {
+  data: Product[] | Product | ProductResponse;
+  timestamp: number;
+}
+
+interface HttpError extends Error {
+  status?: number;
+  originalError?: unknown;
+  error?: unknown;
+}
 
 export interface Product {
   id: number;
@@ -13,7 +24,7 @@ export interface Product {
   imageUrl: string;
   status: boolean;
   category: string;
-  productGroup: string;
+  productGroup?: string;
   productCode: string;
   stock: number;
   createdAt?: string | Date;
@@ -59,18 +70,17 @@ export interface ProductResponse {
 })
 export class ProductService {
   private apiUrl = 'http://localhost:5000/api/products';
-  private cache = new Map<string, any>();
+  private cache = new Map<string, CacheEntry>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
-  private loadingStates = new Map<string, Observable<any>>(); // Tránh duplicate requests
-
-  constructor(private http: HttpClient) { }
+  private loadingStates = new Map<string, Observable<Product[]>>(); // Tránh duplicate requests
+  private readonly http = inject(HttpClient);
 
   // Lấy tất cả sản phẩm với cache
   getAllProducts(): Observable<Product[]> {
     const cacheKey = 'all_products';
     const cached = this.getCachedData(cacheKey);
     
-    if (cached) {
+    if (cached && Array.isArray(cached)) {
       console.log('Using cached products:', cached.length);
       return of(cached);
     }
@@ -117,7 +127,7 @@ export class ProductService {
   // Lấy sản phẩm với pagination
   getProductsPaginated(page: number = 1, limit: number = 10, search?: string): Observable<ProductResponse> {
     const cacheKey = `products_page_${page}_limit_${limit}_search_${search || ''}`;
-    const cached = this.getCachedData(cacheKey);
+    const cached = this.getCachedProductResponse(cacheKey);
     
     if (cached) {
       return of(cached);
@@ -161,7 +171,7 @@ export class ProductService {
   // Lấy sản phẩm theo ID với cache
   getProductById(id: number): Observable<Product> {
     const cacheKey = `product_${id}`;
-    const cached = this.getCachedData(cacheKey);
+    const cached = this.getCachedSingleProduct(cacheKey);
     
     if (cached) {
       return of(cached);
@@ -181,13 +191,14 @@ export class ProductService {
   }
 
   // Tạo sản phẩm mới
-  createProduct(product: Omit<Product, 'id'>): Observable<Product> {
+  createProduct(product: Omit<Product, 'id'> & { productGroup?: string }): Observable<Product> {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json'
     };
     
     // Chuẩn bị dữ liệu để gửi lên server với validation
+    const productGroup = product.productGroup?.trim() || 'Sản phẩm';
     const productData = {
       name: product.name?.trim() || '',
       description: product.description?.trim() || '',
@@ -197,7 +208,7 @@ export class ProductService {
       imageUrl: product.imageUrl?.trim() || '',
       status: product.status !== undefined ? product.status : true,
       category: product.category?.trim() || 'Điện tử',
-      productGroup: product.productGroup?.trim() || 'Sản phẩm',
+      productGroup: productGroup,
       productCode: product.productCode?.trim() || `PRD-${Date.now()}`,
       stock: Number(product.stock) || 0,
       productDetails: product.productDetails || [],
@@ -253,10 +264,10 @@ export class ProductService {
         }
         
         // Tạo error object với thông tin đầy đủ
-        const enhancedError = new Error(errorMessage);
-        (enhancedError as any).status = error.status;
-        (enhancedError as any).originalError = error;
-        (enhancedError as any).error = error.error;
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        enhancedError.error = error.error;
         throw enhancedError;
       })
     );
@@ -371,8 +382,8 @@ export class ProductService {
           errorMessage = 'Server error occurred';
         }
         
-        const enhancedError = new Error(errorMessage);
-        (enhancedError as any).originalError = error;
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.originalError = error;
         throw enhancedError;
       })
     );
@@ -397,16 +408,43 @@ export class ProductService {
   }
 
   // Cache management
-  private getCachedData(key: string): any {
+  private getCachedData(key: string): Product[] | null {
     const cached = this.cache.get(key);
     if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
-      return cached.data;
+      const data = cached.data;
+      if (Array.isArray(data)) {
+        return data;
+      }
     }
     this.cache.delete(key);
     return null;
   }
 
-  private setCachedData(key: string, data: any): void {
+  private getCachedProductResponse(key: string): ProductResponse | null {
+    const cached = this.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+      const data = cached.data;
+      if (data && typeof data === 'object' && 'data' in data && 'total' in data) {
+        return data as ProductResponse;
+      }
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  private getCachedSingleProduct(key: string): Product | null {
+    const cached = this.cache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION) {
+      const data = cached.data;
+      if (data && typeof data === 'object' && !Array.isArray(data) && !('data' in data)) {
+        return data as Product;
+      }
+    }
+    this.cache.delete(key);
+    return null;
+  }
+
+  private setCachedData(key: string, data: Product[] | Product | ProductResponse): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now()

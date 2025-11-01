@@ -1,0 +1,368 @@
+// Ensure sidebar always has white background
+aside {
+  background-color: #ffffff !important;
+  min-height: 100vh;
+  height: 100%;
+}
+
+// Logo and app name styling
+.sidebar-header {
+  padding: 1.5rem 1.25rem;
+}
+
+.logo-icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon {
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+}
+
+.app-name {
+  font-weight: 700;
+  font-size: 1.25rem;
+  color: #1F2937;
+  letter-spacing: -0.025em;
+}
+
+// Menu section header
+.menu-section-header {
+  margin-bottom: 0.5rem;
+  padding: 0 0.75rem;
+  font-size: 0.6875rem;
+  text-transform: uppercase;
+  font-weight: 500;
+  line-height: 1.25rem;
+  color: #6B7280;
+  letter-spacing: 0.05em;
+}
+
+// Menu items styling
+.menu-item {
+  position: relative;
+  width: auto;
+  min-width: calc(100% - 2rem);
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0.625rem 0.75rem;
+  margin: 0 0.25rem;
+  border-radius: 8px;
+  transition: all 0.2s ease-in-out;
+  
+  .menu-item-icon-size {
+    flex-shrink: 0;
+    width: 1.5rem;
+    height: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.25rem;
+  }
+  
+  .menu-item-text {
+    flex-shrink: 0;
+    font-weight: 500;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    margin-left: 0;
+    padding-left: 0;
+    letter-spacing: 0;
+  }
+  
+  .menu-dropdown-badge,
+  .menu-chevron {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+}
+
+// Active menu item
+.menu-item-active {
+  background-color: #EEF2FF;
+  
+  .menu-item-text {
+    color: #4F46E5;
+    font-weight: 600;
+  }
+  
+  .menu-item-icon-active {
+    color: #4F46E5;
+  }
+  
+  .menu-chevron {
+    color: #4F46E5;
+  }
+  
+  svg {
+    color: #4F46E5;
+  }
+}
+
+// Inactive menu item
+.menu-item-inactive {
+  background-color: transparent;
+  
+  .menu-item-text {
+    color: #1F2937;
+    font-weight: 400;
+  }
+  
+  .menu-item-icon-inactive {
+    color: #6B7280;
+  }
+  
+  .menu-chevron {
+    color: #6B7280;
+  }
+  
+  svg {
+    color: #6B7280;
+  }
+  
+  &:hover {
+    background-color: #F9FAFB;
+    
+    .menu-item-text {
+      color: #1F2937;
+    }
+    
+    .menu-item-icon-inactive {
+      color: #4B5563;
+    }
+  }
+}
+
+// Menu dropdown items (sub-items)
+.menu-dropdown-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.625rem 1rem;
+  margin: 0.125rem 0.25rem; // margin-right matches Dashboard (0.25rem)
+  margin-left: 2.5rem;
+  border-radius: 0;
+  transition: all 0.2s ease-in-out;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  padding-left: 0;
+  padding-right: 0;
+  box-sizing: border-box;
+  position: relative;
+  background: transparent;
+}
+
+// Text wrapper for sub-item - only this gets border and background
+// Left edge is 20px (1.25rem) shorter than Dashboard, right edge aligns with Dashboard
+.menu-dropdown-item-text {
+  padding: 0.625rem 1rem;
+  padding-right: 0.75rem; // Match Dashboard's right padding
+  border-radius: 8px;
+  display: inline-block;
+  margin-left: -1.25rem; // Move left by 20px to make left edge shorter than Dashboard
+}
+
+.menu-dropdown-item-active {
+  .menu-dropdown-item-text {
+    background-color: #F0F4FF;
+    color: #4F46E5;
+    font-weight: 500;
+  }
+}
+
+.menu-dropdown-item-inactive {
+  .menu-dropdown-item-text {
+    background-color: #FFFFFF;
+    color: #1F2937;
+    font-weight: 400;
+  }
+  
+  &:hover {
+    .menu-dropdown-item-text {
+      background-color: #FFFFFF;
+      color: #1F2937;
+    }
+  }
+}
+
+// Menu dropdown badge
+.menu-dropdown-badge {
+  font-size: 0.625rem;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+.menu-dropdown-badge-active {
+  background-color: #4F46E5;
+  color: #FFFFFF;
+}
+
+.menu-dropdown-badge-inactive {
+  background-color: #E5E7EB;
+  color: #6B7280;
+}
+
+// Submenu container
+.menu-dropdown-item {
+  .menu-dropdown-badge {
+    margin-left: auto;
+  }
+}
+
+// Icon color helpers
+.menu-item-icon-active {
+  color: #4F46E5;
+  
+  svg,
+  svg path {
+    fill: #4F46E5;
+    stroke: #4F46E5;
+  }
+}
+
+.menu-item-icon-inactive {
+  color: #6B7280;
+  
+  svg,
+  svg path {
+    fill: #6B7280;
+    stroke: #6B7280;
+  }
+}
+
+// Center menu items with icon + text inside border
+nav > div > ul {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  
+  li {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+}
+
+// Ensure sub-menu container displays items vertically
+div[id^="main-"],
+div[id^="others-"] {
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-left: 0;
+  
+  ul {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    list-style: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    padding-left: 0 !important;
+    
+    li {
+      width: 100% !important;
+      display: block !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      
+      a {
+        display: block !important;
+        width: 100% !important;
+      }
+    }
+  }
+}
+
+// When sidebar is collapsed on desktop, center all menu items and icons
+@media (min-width: 1280px) {
+  aside {
+    min-height: 100vh;
+    height: 100%;
+  }
+  
+  aside.sidebar-collapsed {
+    nav {
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+    }
+    
+    // Center all section containers and wrappers
+    > div > div,
+    > div > div > div,
+    nav > div,
+    nav > div > div {
+      width: 100% !important;
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: center !important;
+    }
+    
+    // Center section headers (ellipsis)
+    h2 {
+      display: flex !important;
+      justify-content: center !important;
+      align-items: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      margin-left: auto !important;
+      margin-right: auto !important;
+      width: 100%;
+      
+      svg {
+        margin: 0 auto !important;
+      }
+    }
+    
+    // Center menu items
+    .menu-item,
+    button.menu-item,
+    a.menu-item {
+      justify-content: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      gap: 0 !important;
+      width: 100%;
+      margin: 0 auto !important;
+      
+      .menu-item-icon-size {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+      }
+      
+      // Hide dropdown arrow and badges when collapsed
+      svg.ml-auto,
+      .menu-dropdown-badge,
+      .menu-item-text {
+        display: none !important;
+      }
+    }
+    
+    // Ensure list items are centered
+    ul {
+      align-items: center !important;
+      padding-left: 0 !important;
+      padding-right: 0 !important;
+      width: 100%;
+    }
+    
+    li {
+      display: flex !important;
+      justify-content: center !important;
+      width: 100%;
+    }
+  }
+}
