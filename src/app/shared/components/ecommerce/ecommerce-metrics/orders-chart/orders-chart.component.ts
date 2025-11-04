@@ -47,6 +47,11 @@ export class OrdersChartComponent {
     categories: ['May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     axisBorder: { show: false },
     axisTicks: { show: false },
+    labels: {
+      style: {
+        fontWeight: 400
+      }
+    }
   };
   public plotOptions: ApexPlotOptions = {
     bar: {
@@ -65,7 +70,14 @@ export class OrdersChartComponent {
   public legend: ApexLegend = {
     show: false,
   };
-  public yaxis: ApexYAxis = { title: { text: undefined } };
+  public yaxis: ApexYAxis = {
+    title: { text: undefined },
+    labels: {
+      style: {
+        fontWeight: 400
+      }
+    }
+  };
   public grid: ApexGrid = { yaxis: { lines: { show: true } } };
   public fill: ApexFill = { opacity: 1 };
   public tooltip: ApexTooltip = {

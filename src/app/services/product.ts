@@ -1,7 +1,7 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
 import { Observable, of, throwError } from 'rxjs';
-import { map, catchError, shareReplay, timeout, retryWhen, delay, take } from 'rxjs/operators';
+import { map, catchError, shareReplay, timeout, retryWhen, delay, take, switchMap } from 'rxjs/operators';
 
 interface CacheEntry {
   data: Product[] | Product | ProductResponse;
@@ -354,22 +354,44 @@ export class ProductService {
       'Accept': 'application/json'
     };
     
-    return this.http.put<Product>(`${this.apiUrl}/${id}`, updateData, { headers }).pipe(
-      map(updatedProduct => {
-        console.log('ProductService: Update successful:', updatedProduct);
-        this.clearCache();
-        return updatedProduct;
+    return this.http.put<Product>(`${this.apiUrl}/${id}`, updateData, { headers, observe: 'response' }).pipe(
+      switchMap((response: HttpResponse<Product>) => {
+        // Nếu response có body (status 200), sử dụng body đó
+        if (response.body) {
+          this.clearCache();
+          return of(response.body);
+        }
+        
+        // Nếu response không có body (status 204), gọi GET để lấy dữ liệu mới
+        if (response.status === 204 || !response.body) {
+          this.clearCache();
+          return this.getProductById(id).pipe(
+            map(updatedProduct => {
+              return updatedProduct;
+            })
+          );
+        }
+        
+        // Trường hợp khác, tạo Product từ request data
+        const updatedProduct: Product = {
+          id: id,
+          name: updateData.name,
+          description: updateData.description,
+          originalPrice: updateData.originalPrice,
+          salePrice: updateData.salePrice,
+          price: updateData.price,
+          imageUrl: updateData.imageUrl,
+          status: updateData.status,
+          category: updateData.category,
+          productGroup: updateData.productGroup,
+          productCode: updateData.productCode,
+          stock: updateData.stock,
+          productDetails: updateData.productDetails,
+          productVariants: updateData.productVariants
+        };
+        return of(updatedProduct);
       }),
       catchError(error => {
-        console.error('ProductService: Update error:', error);
-        console.error('Error details:', {
-          status: error.status,
-          message: error.message,
-          error: error.error,
-          url: `${this.apiUrl}/${id}`,
-          requestData: updateData
-        });
-        
         // Enhanced error handling
         let errorMessage = 'Update failed';
         if (error.status === 400) {
@@ -393,16 +415,79 @@ export class ProductService {
   deleteProduct(id: number): Observable<void> {
     const headers = {
       'Content-Type': 'application/json',
-      'Accept': 'application/json'
+      'Accept': '*/*'
     };
     
-    return this.http.delete<void>(`${this.apiUrl}/${id}`, { headers }).pipe(
-      map(() => {
+    // Sử dụng endpoint với chữ P hoa (Products) để khớp với API
+    const deleteUrl = `http://localhost:5000/api/Products/${id}`;
+    
+    return this.http.delete(deleteUrl, { headers, observe: 'response', responseType: 'json' }).pipe(
+      map((response) => {
         this.clearCache(); // Clear cache after deleting
+        
+        // Xóa thành công nếu status là 200, 204, hoặc không có lỗi
+        if (response.status === 200 || response.status === 204 || !response.body) {
+          return;
+        }
+        
+        return;
       }),
       catchError(error => {
-        console.error('Error deleting product:', error);
-        throw error;
+        // Xử lý lỗi từ server (có thể là text/plain hoặc JSON)
+        let errorMessage = 'Không thể xóa sản phẩm';
+        
+        // Xử lý error response
+        if (error.error) {
+          // Nếu error.error là string (text/plain response)
+          if (typeof error.error === 'string') {
+            errorMessage = error.error;
+            
+            // Xử lý các lỗi SQL phổ biến
+            if (error.error.includes("Invalid object name") || error.error.includes("CartItems")) {
+              errorMessage = 'Lỗi database: Bảng CartItems chưa được tạo. Vui lòng liên hệ quản trị viên để kiểm tra database.';
+            }
+          } 
+          // Nếu error.error là object (JSON response)
+          else if (typeof error.error !== null && typeof error.error === 'object') {
+            // Kiểm tra các field có thể chứa error message
+            const errorObj = error.error as any;
+            
+            if (errorObj.message) {
+              errorMessage = errorObj.message;
+              
+              // Xử lý lỗi SQL trong message
+              if (errorObj.message.includes("Invalid object name") || errorObj.message.includes("CartItems")) {
+                errorMessage = 'Lỗi database: Bảng CartItems chưa được tạo. Vui lòng liên hệ quản trị viên để kiểm tra database.';
+              }
+            } else if (errorObj.error) {
+              errorMessage = typeof errorObj.error === 'string' ? errorObj.error : errorObj.error.message || errorMessage;
+            } else if (errorObj.title) {
+              errorMessage = errorObj.title;
+            } else if (errorObj.detail) {
+              errorMessage = errorObj.detail;
+            } else if (errorObj.type) {
+              errorMessage = errorObj.type;
+            }
+          }
+        }
+        
+        // Thêm thông tin status code vào message nếu có
+        if (error.status) {
+          if (error.status === 500) {
+            // Nếu chưa có message chi tiết, dùng message mặc định
+            if (errorMessage === 'Không thể xóa sản phẩm') {
+              errorMessage = 'Lỗi server khi xóa sản phẩm. Có thể sản phẩm đang được sử dụng ở đơn hàng hoặc giỏ hàng. Vui lòng thử lại sau.';
+            }
+          }
+        }
+        
+        // Enhanced error với thông tin chi tiết
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        enhancedError.error = error.error;
+        
+        throw enhancedError;
       })
     );
   }

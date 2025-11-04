@@ -2,6 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRe
 import { CommonModule } from '@angular/common';
 import { Customer, CustomerService } from '../../../../services/customer.service';
 import { UserInsertEditComponent } from '../user-insert-edit/user-insert-edit.component';
+import { BadgeComponent } from '../../../../shared/components/ui/badge/badge.component';
 import { catchError, timeout } from 'rxjs/operators';
 import { Subject, takeUntil } from 'rxjs';
 import { of } from 'rxjs';
@@ -9,7 +10,7 @@ import { of } from 'rxjs';
 @Component({
   selector: 'app-user-list',
   standalone: true,
-  imports: [CommonModule, UserInsertEditComponent],
+  imports: [CommonModule, UserInsertEditComponent, BadgeComponent],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -25,17 +26,44 @@ export class UserListComponent implements OnInit, OnDestroy {
   isEditing = false;
   selectedCustomer: Customer | null = null;
   
+  // Action menu state
+  activeMenuId: number | null = null;
+  
   private destroy$ = new Subject<void>();
   private readonly customerService = inject(CustomerService);
   private readonly cdr = inject(ChangeDetectorRef);
 
   ngOnInit(): void {
     this.loadCustomers();
+    // Close menu when clicking outside
+    document.addEventListener('click', this.handleOutsideClick.bind(this));
   }
   
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    document.removeEventListener('click', this.handleOutsideClick.bind(this));
+  }
+  
+  handleOutsideClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    if (this.activeMenuId !== null && !target.closest('.actions-cell')) {
+      this.closeActionMenu();
+    }
+  }
+  
+  toggleActionMenu(customerId: number): void {
+    if (this.activeMenuId === customerId) {
+      this.activeMenuId = null;
+    } else {
+      this.activeMenuId = customerId;
+    }
+    this.cdr.markForCheck();
+  }
+  
+  closeActionMenu(): void {
+    this.activeMenuId = null;
+    this.cdr.markForCheck();
   }
 
   loadCustomers() {
@@ -57,7 +85,7 @@ export class UserListComponent implements OnInit, OnDestroy {
         } else if (error.status === 0) {
           this.errorMessage = 'Không thể kết nối đến server. Vui lòng đảm bảo server đang chạy tại http://localhost:5000';
         } else {
-          this.errorMessage = `Lỗi khi tải dữ liệu: ${error.status || error.message || 'Unknown error'}`;
+          this.errorMessage = `Lỗi khi tải dữ liệu: ${error.status || error.message || 'Lỗi không xác định'}`;
         }
         this.customers = [];
         this.cdr.markForCheck();
@@ -98,7 +126,7 @@ export class UserListComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.loading = false;
         this.showSkeleton = false;
-        this.errorMessage = 'Lỗi không xác định khi tải dữ liệu: ' + (error.message || 'Unknown');
+        this.errorMessage = 'Lỗi không xác định khi tải dữ liệu: ' + (error.message || 'Lỗi không xác định');
         this.customers = [];
         this.cdr.markForCheck();
       }
@@ -134,6 +162,15 @@ export class UserListComponent implements OnInit, OnDestroy {
 
   getRoleClass(role: string): string {
     return `role-${role}`;
+  }
+
+  getRoleColor(role: string): 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark' {
+    switch(role) {
+      case 'admin': return 'error';
+      case 'staff': return 'success';
+      case 'customer': return 'info';
+      default: return 'light';
+    }
   }
 
   formatDate(dateString: string | null): string {
@@ -219,11 +256,11 @@ export class UserListComponent implements OnInit, OnDestroy {
       error: (error) => {
         // Error: Restore original list and show error
         this.customers = [...originalCustomers];
-        this.errorMessage = `Lỗi khi xóa người dùng: ${error.error?.message || error.message || 'Unknown error'}`;
+        this.errorMessage = `Lỗi khi xóa người dùng: ${error.error?.message || error.message || 'Lỗi không xác định'}`;
         this.cdr.markForCheck();
         this.cdr.detectChanges();
         
-        alert('Lỗi khi xóa người dùng: ' + (error.error?.message || error.message || 'Unknown error'));
+        alert('Lỗi khi xóa người dùng: ' + (error.error?.message || error.message || 'Lỗi không xác định'));
         
         // Reload to get current state from server
         setTimeout(() => {

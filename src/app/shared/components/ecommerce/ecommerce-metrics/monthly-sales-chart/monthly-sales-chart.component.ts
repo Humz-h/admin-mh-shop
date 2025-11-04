@@ -35,6 +35,11 @@ export class MonthlySalesChartComponent {
     ],
     axisBorder: { show: false },
     axisTicks: { show: false },
+    labels: {
+      style: {
+        fontWeight: 400
+      }
+    }
   };
   public plotOptions: ApexPlotOptions = {
     bar: {
@@ -56,7 +61,14 @@ export class MonthlySalesChartComponent {
     horizontalAlign: 'left',
     fontFamily: 'Outfit',
   };
-  public yaxis: ApexYAxis = { title: { text: undefined } };
+  public yaxis: ApexYAxis = {
+    title: { text: undefined },
+    labels: {
+      style: {
+        fontWeight: 400
+      }
+    }
+  };
   public grid: ApexGrid = { yaxis: { lines: { show: true } } };
   public fill: ApexFill = { opacity: 1 };
   public tooltip: ApexTooltip = {

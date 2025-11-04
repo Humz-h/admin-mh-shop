@@ -26,6 +26,14 @@
   background-color: #ffffff;
 }
 
+.dark .sidebar-container {
+  background-color: #1f2937;
+}
+
+.dark .main-content-container {
+  background-color: #111827;
+}
+
 // On mobile (< 1280px), sidebar overlay, content full width
 @media (max-width: 1279px) {
   .sidebar-container {

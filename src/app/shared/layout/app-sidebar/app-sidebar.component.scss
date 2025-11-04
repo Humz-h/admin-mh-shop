@@ -1,6 +1,5 @@
-// Ensure sidebar always has white background
+// Sidebar background - overridden by Tailwind classes
 aside {
-  background-color: #ffffff !important;
   min-height: 100vh;
   height: 100%;
 }
@@ -29,6 +28,10 @@ aside {
   letter-spacing: -0.025em;
 }
 
+.dark .app-name {
+  color: #f9fafb;
+}
+
 // Menu section header
 .menu-section-header {
   margin-bottom: 0.5rem;
@@ -39,6 +42,10 @@ aside {
   line-height: 1.25rem;
   color: #6B7280;
   letter-spacing: 0.05em;
+}
+
+.dark .menu-section-header {
+  color: #9ca3af;
 }
 
 // Menu items styling
@@ -103,6 +110,27 @@ aside {
   }
 }
 
+.dark .menu-item-active {
+  background-color: #3730a3;
+  
+  .menu-item-text {
+    color: #a5b4fc;
+    font-weight: 600;
+  }
+  
+  .menu-item-icon-active {
+    color: #a5b4fc;
+  }
+  
+  .menu-chevron {
+    color: #a5b4fc;
+  }
+  
+  svg {
+    color: #a5b4fc;
+  }
+}
+
 // Inactive menu item
 .menu-item-inactive {
   background-color: transparent;
@@ -133,6 +161,36 @@ aside {
     
     .menu-item-icon-inactive {
       color: #4B5563;
+    }
+  }
+}
+
+.dark .menu-item-inactive {
+  .menu-item-text {
+    color: #e5e7eb;
+  }
+  
+  .menu-item-icon-inactive {
+    color: #9ca3af;
+  }
+  
+  .menu-chevron {
+    color: #9ca3af;
+  }
+  
+  svg {
+    color: #9ca3af;
+  }
+  
+  &:hover {
+    background-color: #374151;
+    
+    .menu-item-text {
+      color: #f3f4f6;
+    }
+    
+    .menu-item-icon-inactive {
+      color: #d1d5db;
     }
   }
 }
@@ -174,6 +232,14 @@ aside {
   }
 }
 
+.dark .menu-dropdown-item-active {
+  .menu-dropdown-item-text {
+    background-color: #3730a3;
+    color: #a5b4fc;
+    font-weight: 500;
+  }
+}
+
 .menu-dropdown-item-inactive {
   .menu-dropdown-item-text {
     background-color: #FFFFFF;
@@ -185,6 +251,20 @@ aside {
     .menu-dropdown-item-text {
       background-color: #FFFFFF;
       color: #1F2937;
+    }
+  }
+}
+
+.dark .menu-dropdown-item-inactive {
+  .menu-dropdown-item-text {
+    background-color: transparent;
+    color: #e5e7eb;
+  }
+  
+  &:hover {
+    .menu-dropdown-item-text {
+      background-color: #374151;
+      color: #f3f4f6;
     }
   }
 }
@@ -209,6 +289,11 @@ aside {
   color: #6B7280;
 }
 
+.dark .menu-dropdown-badge-inactive {
+  background-color: #4b5563;
+  color: #9ca3af;
+}
+
 // Submenu container
 .menu-dropdown-item {
   .menu-dropdown-badge {
@@ -227,6 +312,16 @@ aside {
   }
 }
 
+.dark .menu-item-icon-active {
+  color: #a5b4fc;
+  
+  svg,
+  svg path {
+    fill: #a5b4fc;
+    stroke: #a5b4fc;
+  }
+}
+
 .menu-item-icon-inactive {
   color: #6B7280;
   
@@ -234,6 +329,16 @@ aside {
   svg path {
     fill: #6B7280;
     stroke: #6B7280;
+  }
+}
+
+.dark .menu-item-icon-inactive {
+  color: #9ca3af;
+  
+  svg,
+  svg path {
+    fill: #9ca3af;
+    stroke: #9ca3af;
   }
 }
 

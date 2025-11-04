@@ -4,11 +4,12 @@ import { Inventory, InventoryService } from '../../services/inventory.service';
 import { catchError, timeout } from 'rxjs/operators';
 import { Subject, takeUntil } from 'rxjs';
 import { of } from 'rxjs';
+import { BadgeComponent } from '../../../../shared/components/ui/badge/badge.component';
 
 @Component({
   selector: 'app-inventory-list',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, BadgeComponent],
   templateUrl: './inventory-list.component.html',
   styleUrls: ['./inventory-list.component.scss'],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -51,7 +52,7 @@ export class InventoryListComponent implements OnInit, OnDestroy {
         } else if (error.status === 0) {
           this.errorMessage = 'Không thể kết nối đến server. Vui lòng đảm bảo server đang chạy tại http://localhost:5000';
         } else {
-          this.errorMessage = `Lỗi khi tải dữ liệu: ${error.status || error.message || 'Unknown error'}`;
+          this.errorMessage = `Lỗi khi tải dữ liệu: ${error.status || error.message || 'Lỗi không xác định'}`;
         }
         this.inventories = [];
         this.cdr.markForCheck();
@@ -90,7 +91,7 @@ export class InventoryListComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.loading = false;
         this.showSkeleton = false;
-        this.errorMessage = 'Lỗi không xác định khi tải dữ liệu: ' + (error.message || 'Unknown');
+        this.errorMessage = 'Lỗi không xác định khi tải dữ liệu: ' + (error.message || 'Lỗi không xác định');
         this.inventories = [];
         this.cdr.markForCheck();
       }

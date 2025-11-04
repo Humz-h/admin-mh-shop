@@ -4,10 +4,11 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, debounceTime, distinctUntilChanged, takeUntil, timeout } from 'rxjs';
 import { OrderService, Order } from '../services/order';
+import { BadgeComponent } from '../shared/components/ui/badge/badge.component';
 
 @Component({
   selector: 'app-order-list',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, BadgeComponent],
   templateUrl: './order-list.html',
   styleUrl: './order-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -71,7 +72,7 @@ export class OrderList implements OnInit, OnDestroy {
     
     console.log('Loading orders...');
     
-    this.orderService.getOrders(this.currentPage, this.pageSize).pipe(
+    this.orderService.getOrders(this.currentPage, this.pageSize, undefined, false).pipe(
       timeout(5000), // 5 giây timeout
       takeUntil(this.destroy$)
     ).subscribe({
@@ -176,7 +177,7 @@ export class OrderList implements OnInit, OnDestroy {
 
   private preloadNextPage(): void {
     // Preload next page in background
-    this.orderService.getOrders(this.currentPage + 1, this.pageSize)
+    this.orderService.getOrders(this.currentPage + 1, this.pageSize, undefined, false)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (orders) => {
@@ -263,6 +264,17 @@ export class OrderList implements OnInit, OnDestroy {
 
   getStatusBadgeClass(status: string): string {
     return this.orderService.getStatusBadgeClass(status);
+  }
+
+  getStatusColor(status: string): 'primary' | 'success' | 'error' | 'warning' | 'info' | 'light' | 'dark' {
+    switch(status) {
+      case 'pending': return 'warning';
+      case 'paid': return 'info';
+      case 'shipped': return 'info';
+      case 'delivered': return 'success';
+      case 'cancelled': return 'error';
+      default: return 'light';
+    }
   }
 
   getStatusText(status: string): string {

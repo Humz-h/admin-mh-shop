@@ -7,6 +7,7 @@ import { ProductService, Product, ProductDetail, ProductVariant } from '../servi
 import { HttpClientModule } from '@angular/common/http';
 import { Subject, takeUntil, debounceTime, distinctUntilChanged } from 'rxjs';
 import { ProductInsertEdit } from '../product-insert-edit/product-insert-edit';
+import { BadgeComponent } from '../shared/components/ui/badge/badge.component';
 
 interface ProductCreateUpdateData {
   name: string;
@@ -65,7 +66,7 @@ interface ProductWithExtras extends Product {
 // Component quản lý danh sách sản phẩm
 @Component({
   selector: 'app-product-list',
-  imports: [CommonModule, FormsModule, HttpClientModule, ProductInsertEdit],
+  imports: [CommonModule, FormsModule, HttpClientModule, ProductInsertEdit, BadgeComponent],
   templateUrl: './product-list.html',
   styleUrl: './product-list.scss',
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -444,7 +445,7 @@ export class ProductList implements OnInit, OnDestroy {
     if (product.productDetails && product.productDetails.length > 0 && product.productDetails[0].brand) {
       return product.productDetails[0].brand;
     }
-    return product.productGroup || 'N/A';
+    return product.productGroup || 'Chưa có';
   }
 
   // Toggle select all
@@ -657,13 +658,13 @@ export class ProductList implements OnInit, OnDestroy {
       <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
         <rect width="100" height="100" fill="#f3f4f6"/>
         <text x="50" y="50" text-anchor="middle" dy=".3em" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">
-          No Image
+          Không có ảnh
         </text>
       </svg>
     `)}`;
     
     img.src = svgData;
-    img.alt = 'No Image Available';
+    img.alt = 'Không có ảnh';
   }
 
   // Trigger file input
@@ -965,54 +966,64 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Xóa sản phẩm với xác nhận
   deleteProduct(product: ProductWithExtras) {
-    console.log('=== DELETE PRODUCT CLICKED ===');
-    console.log('Product to delete:', product);
-    console.log('Product ID:', product.id);
-    console.log('Product name:', product.name);
-    
     if (confirm(`Bạn có chắc chắn muốn xóa sản phẩm "${product.name}"?`)) {
-      console.log('User confirmed deletion, proceeding...');
-      
       this.productService.deleteProduct(product.id).subscribe({
         next: () => {
-          console.log('=== DELETE SUCCESSFUL ===');
-          console.log('Product deleted successfully');
-          
           // Hiển thị thông báo thành công
           alert('Xóa sản phẩm thành công!');
           
           // Reload page sau 1 giây để cập nhật danh sách
           setTimeout(() => {
-            console.log('Reloading page to refresh product list after deletion...');
             window.location.reload();
           }, 1000);
         },
         error: (error) => {
-          console.error('=== DELETE ERROR ===');
-          console.error('Error deleting product:', error);
-          console.error('Error details:', {
-            status: error.status,
-            message: error.message,
-            error: error.error,
-            url: `DELETE ${this.productService['apiUrl']}/${product.id}`
-          });
-          
           let errorMessage = 'Không thể xóa sản phẩm. Vui lòng thử lại sau.';
+          
+          // Xử lý các loại lỗi khác nhau
           if (error.status === 404) {
             errorMessage = 'Sản phẩm không tồn tại.';
           } else if (error.status === 403) {
             errorMessage = 'Bạn không có quyền xóa sản phẩm này.';
           } else if (error.status === 500) {
-            errorMessage = 'Lỗi server. Vui lòng thử lại sau.';
+            // Nếu có message từ server, sử dụng nó
+            if (error.message && error.message !== 'Không thể xóa sản phẩm') {
+              errorMessage = error.message;
+              
+              // Kiểm tra lỗi database
+              if (error.message.includes("CartItems") || error.message.includes("Invalid object name")) {
+                errorMessage = 'Lỗi database: Bảng CartItems chưa được tạo. Vui lòng liên hệ quản trị viên để kiểm tra database.';
+              }
+            } else if (error.error) {
+              if (typeof error.error === 'string') {
+                errorMessage = error.error;
+                
+                // Kiểm tra lỗi database trong error.error string
+                if (error.error.includes("CartItems") || error.error.includes("Invalid object name")) {
+                  errorMessage = 'Lỗi database: Bảng CartItems chưa được tạo. Vui lòng liên hệ quản trị viên để kiểm tra database.';
+                }
+              } else if (typeof error.error === 'object' && error.error.message) {
+                errorMessage = error.error.message;
+                
+                // Kiểm tra lỗi database trong error.error.message
+                if (error.error.message.includes("CartItems") || error.error.message.includes("Invalid object name")) {
+                  errorMessage = 'Lỗi database: Bảng CartItems chưa được tạo. Vui lòng liên hệ quản trị viên để kiểm tra database.';
+                }
+              }
+            } else {
+              errorMessage = 'Lỗi server khi xóa sản phẩm. Có thể sản phẩm đang được sử dụng ở đơn hàng hoặc giỏ hàng. Vui lòng thử lại sau.';
+            }
+          } else if (error.status === 400) {
+            errorMessage = 'Dữ liệu không hợp lệ. Vui lòng thử lại.';
           } else if (error.status === 0) {
             errorMessage = 'Không thể kết nối đến server. Vui lòng kiểm tra kết nối mạng.';
+          } else if (error.message) {
+            errorMessage = error.message;
           }
           
           alert(errorMessage);
         }
       });
-    } else {
-      console.log('User cancelled deletion');
     }
   }
 
@@ -1277,22 +1288,15 @@ export class ProductList implements OnInit, OnDestroy {
     this.productService.updateProduct(this.selectedProduct.id, productData)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (updatedProduct) => {
-          console.log('=== UPDATE SUCCESSFUL ===');
-          console.log('Updated product:', updatedProduct);
-          
-          // Cập nhật trong danh sách
-          this.updateProductInList(updatedProduct, productData);
-          this.filterProducts();
-          
+        next: () => {
           this.saveSuccess = 'Cập nhật sản phẩm thành công!';
           this.isSaving = false;
           
-          // Đóng modal sau 1 giây
+          // Đóng modal và reload trang ngay lập tức
+          this.closeModal();
           setTimeout(() => {
-            this.closeModal();
-            this.refreshProducts();
-          }, 1000);
+            window.location.reload();
+          }, 100);
           
           this.cdr.markForCheck();
         },
@@ -1501,30 +1505,27 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Xử lý khi modal đóng từ component con
   onModalClosed() {
-    console.log('=== MODAL CLOSED FROM CHILD ===');
     this.closeModal();
   }
-  onProductSaved(savedProduct: Product | ProductFormData) {
-    console.log('=== PRODUCT SAVED FROM CHILD ===');
-    console.log('Saved product:', savedProduct);
-    console.log('Is editing:', this.isEditing);
-    
-    // Hiển thị thông báo thành công
-    this.showSuccessMessage(this.isEditing ? 'Cập nhật sản phẩm thành công!' : 'Thêm sản phẩm thành công!');
-    
+
+  // Xử lý khi sản phẩm được lưu/cập nhật từ component con
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onProductSaved(_savedProduct: Product | ProductFormData) {
     // Đóng modal trước
-    this.closeModal();
+    this.showModal = false;
+    this.isEditing = false;
+    this.selectedProduct = null;
+    document.body.style.overflow = '';
+    this.cdr.markForCheck();
     
-    // Reload page sau 1 giây để cập nhật danh sách
+    // Reload trang sau khi modal đã đóng để cập nhật danh sách sản phẩm
     setTimeout(() => {
-      console.log('Reloading page to refresh product list...');
       window.location.reload();
-    }, 1000);
+    }, 200);
   }
 
   // Đóng modal và reset dữ liệu
   closeModal() {
-    console.log('=== CLOSING MODAL ===');
     this.showModal = false;
     this.selectedProduct = this.getEmptyProduct();
     this.selectedFile = null;

@@ -1,116 +1,110 @@
-<div class="inventory-management">
-  <!-- Back to Dashboard Button -->
-  <div class="back-navigation">
-    <button class="btn btn-secondary" (click)="goBack()">
-      ← Quay lại Dashboard
-    </button>
-  </div>
-
-  <!-- Header Section -->
-  <div class="page-header floating">
-    <div class="header-content">
-      <h1 class="page-title">Quản lý tồn kho</h1>
-      <p class="page-subtitle">Quản lý kho hàng và xuất nhập kho</p>
+<div class="w-full py-8 md:py-12">
+  <!-- Main Card Container -->
+  <div class="product-list-container overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+    <!-- Card Header -->
+    <div class="product-list-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-xl font-medium text-gray-900 dark:text-white/95">
+          Quản lý tồn kho
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+          Quản lý kho hàng và xuất nhập kho.
+        </p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button 
+          class="ecommerce-tag-button"
+          (click)="refreshInventories()" 
+          title="Làm mới dữ liệu">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Làm mới
+        </button>
+      </div>
     </div>
-    <div class="header-actions">
-      <button class="btn btn-secondary" (click)="refreshInventories()" title="Làm mới dữ liệu">
-        <span class="btn-icon">🔄</span>
-        Làm mới
+
+    <!-- Loading State -->
+    <div class="flex flex-col items-center justify-center py-12" *ngIf="loading && !showSkeleton">
+      <div class="w-10 h-10 border-4 border-gray-200 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-500 dark:text-gray-400">Đang tải danh sách tồn kho...</p>
+    </div>
+
+    <!-- Error State -->
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="errorMessage && !loading && !showSkeleton">
+      <div class="text-4xl mb-4">⚠️</div>
+      <p class="text-gray-700 dark:text-gray-300 mb-4">{{ errorMessage }}</p>
+      <button 
+        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+        (click)="loadInventories()">
+        Thử lại
       </button>
     </div>
-  </div>
 
-  <!-- Loading State -->
-  <div class="loading-container" *ngIf="loading && !showSkeleton">
-    <div class="loading-spinner"></div>
-    <p>Đang tải danh sách tồn kho...</p>
-  </div>
-
-  <!-- Skeleton Loading -->
-  <div class="skeleton-container" *ngIf="showSkeleton">
-    <div class="skeleton-table">
-      <div class="skeleton-header">
-        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6]"></div>
-      </div>
-      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-badge"></div>
-        <div class="skeleton-cell skeleton-date"></div>
-        <div class="skeleton-cell skeleton-badge"></div>
-        <div class="skeleton-cell skeleton-actions"></div>
-      </div>
+    <!-- Inventory Table -->
+    <div class="max-w-full overflow-x-auto product-table-wrapper" style="margin-top: 20px;" *ngIf="!loading && !errorMessage && !showSkeleton && inventories.length > 0">
+      <table class="w-full text-left">
+        <thead class="border-y border-gray-100 dark:border-gray-800">
+          <tr>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Tên sản phẩm</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Mã sản phẩm</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Số lượng tồn</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày nhập gần nhất</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày trong kho</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of inventories; trackBy: trackByProductId" class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+            <td class="px-6 py-8">
+              <span class="font-medium text-gray-900 text-theme-sm dark:text-white/95">{{ getProductName(item) }}</span>
+            </td>
+            <td class="px-6 py-8">
+              <span class="text-gray-600 text-theme-sm dark:text-gray-400">{{ getProductCode(item) }}</span>
+            </td>
+            <td class="px-6 py-8">
+              <app-badge size="sm" [color]="getQuantity(item) === 0 ? 'error' : (getQuantity(item) < 10 ? 'warning' : 'success')">
+                {{ getQuantity(item) }}
+              </app-badge>
+            </td>
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
+              <span *ngIf="item.lastImportDate">{{ item.lastImportDate | date: 'dd/MM/yyyy HH:mm' }}</span>
+              <span *ngIf="!item.lastImportDate">-</span>
+            </td>
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
+              {{ getDaysInStock(item) }} ngày
+            </td>
+            <td class="px-6 py-8">
+              <div class="flex items-center justify-center gap-2">
+                <button 
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-success-50 text-success-600 hover:bg-success-100 dark:bg-success-500/10 dark:text-success-400 transition-colors"
+                  (click)="importStock(getProductId(item))" 
+                  title="Nhập kho"
+                  [disabled]="!getProductId(item)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path>
+                  </svg>
+                </button>
+                <button 
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-error-50 text-error-600 hover:bg-error-100 dark:bg-error-500/10 dark:text-error-400 transition-colors"
+                  (click)="exportStock(getProductId(item))" 
+                  title="Xuất kho"
+                  [disabled]="!getProductId(item)">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-  </div>
 
-  <!-- Error State -->
-  <div class="error-container" *ngIf="errorMessage && !loading && !showSkeleton">
-    <div class="error-message">
-      <span class="error-icon">⚠️</span>
-      <p>{{ errorMessage }}</p>
-      <button class="btn btn-primary" (click)="loadInventories()">Thử lại</button>
-    </div>
-  </div>
-
-  <!-- Inventory Table -->
-  <div class="table-container" *ngIf="!loading && !errorMessage && !showSkeleton && inventories.length > 0">
-    <table class="inventory-table">
-      <thead>
-        <tr>
-          <th>Tên sản phẩm</th>
-          <th>Mã sản phẩm</th>
-          <th>Số lượng tồn</th>
-          <th>Ngày nhập gần nhất</th>
-          <th>Ngày trong kho</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let item of inventories; trackBy: trackByProductId">
-          <td class="product-name">
-            <span class="name">{{ getProductName(item) }}</span>
-          </td>
-          <td>
-            <span class="product-code">{{ getProductCode(item) }}</span>
-          </td>
-          <td class="quantity-cell">
-            <span class="quantity-badge" 
-                  [class.low-stock]="getQuantity(item) > 0 && getQuantity(item) < 10" 
-                  [class.out-of-stock]="getQuantity(item) === 0">
-              {{ getQuantity(item) }}
-            </span>
-          </td>
-          <td>
-            <span *ngIf="item.lastImportDate">{{ item.lastImportDate | date: 'dd/MM/yyyy HH:mm' }}</span>
-            <span *ngIf="!item.lastImportDate">-</span>
-          </td>
-          <td>{{ getDaysInStock(item) }} ngày</td>
-          <td>
-            <div class="action-buttons">
-              <button class="btn-action btn-import" 
-                      (click)="importStock(getProductId(item))" 
-                      title="Nhập kho"
-                      [disabled]="!getProductId(item)">
-                📥
-              </button>
-              <button class="btn-action btn-export" 
-                      (click)="exportStock(getProductId(item))" 
-                      title="Xuất kho"
-                      [disabled]="!getProductId(item)">
-                📤
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Empty state -->
-  <div class="empty-state" *ngIf="!loading && !errorMessage && !showSkeleton && inventories.length === 0">
-    <div class="empty-message">
-      <span class="empty-icon">📦</span>
-      <p>Không có dữ liệu tồn kho</p>
+    <!-- Empty state -->
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="!loading && !errorMessage && !showSkeleton && inventories.length === 0">
+      <div class="text-4xl mb-4">📦</div>
+      <p class="text-gray-500 dark:text-gray-400">Không có dữ liệu tồn kho</p>
     </div>
   </div>
 </div>

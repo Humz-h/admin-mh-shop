@@ -46,7 +46,7 @@ export class MonthlyTargetComponent {
         name: { show: false },
         value: {
           fontSize: '36px',
-          fontWeight: '600',
+          fontWeight: '400',
           offsetY: -40,
           color: '#1D2939',
           formatter: (val: number) => `${val}%`,

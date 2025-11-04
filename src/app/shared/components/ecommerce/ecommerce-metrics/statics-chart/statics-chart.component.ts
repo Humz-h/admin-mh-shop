@@ -84,14 +84,20 @@ export class StatisticsChartComponent {
     ],
     axisBorder: { show: false },
     axisTicks: { show: false },
-    tooltip: { enabled: false }
+    tooltip: { enabled: false },
+    labels: {
+      style: {
+        fontWeight: 400
+      }
+    }
   };
 
   public yaxis: ApexYAxis = {
     labels: {
       style: {
         fontSize: '12px',
-        colors: ['#6B7280']
+        colors: ['#6B7280'],
+        fontWeight: 400
       }
     },
     title: {

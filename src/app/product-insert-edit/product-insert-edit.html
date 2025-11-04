@@ -38,7 +38,7 @@
                 #fileInput>
               
               <!-- Upload Placeholder -->
-              <div class="upload-placeholder" *ngIf="!previewImageUrl && !product.imageUrl">
+              <div class="upload-placeholder" *ngIf="!getDisplayImageUrl()">
                 <div class="upload-icon">
                   <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -46,7 +46,7 @@
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                   </svg>
                 </div>
-                <p class="upload-text">Click để upload ảnh</p>
+                <p class="upload-text">Nhấp để tải ảnh lên</p>
                 <p class="upload-specs">Ảnh phải có tỷ lệ vuông (1:1)<br>
                 Kích thước tối thiểu: 400x400px<br>
                 Khuyến nghị: 800x800px<br>
@@ -54,11 +54,12 @@
               </div>
               
               <!-- Image Preview -->
-              <div class="image-preview" *ngIf="previewImageUrl">
+              <div class="image-preview" *ngIf="getDisplayImageUrl()">
                 <img 
-                  [src]="previewImageUrl" 
-                  [alt]="product.name || 'Preview'"
-                  class="preview-image">
+                  [src]="getDisplayImageUrl()" 
+                  [alt]="product.name || 'Xem trước'"
+                  class="preview-image"
+                  (error)="onImageError($event)">
                 <div class="image-overlay">
                   <button type="button" class="remove-btn" (click)="removeImage($event)">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -401,7 +402,7 @@
                   [(ngModel)]="variant.attributes" 
                   [name]="'variantAttributes_' + i"
                   class="form-input"
-                  placeholder="Ví dụ: Color: Red, Size: L">
+                  placeholder="Ví dụ: Màu: Đỏ, Kích thước: L">
               </div>
             </div>
             

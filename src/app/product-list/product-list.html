@@ -1,52 +1,76 @@
-<div class="product-management">
-  <!-- Back to Dashboard Button -->
-  <div class="back-navigation">
-    <button class="btn btn-secondary" (click)="goBack()">
-      ← Quay lại Dashboard
-    </button>
-  </div>
-
+<div class="w-full py-8 md:py-12">
   <!-- Main Card Container -->
-  <div class="main-card">
+  <div class="product-list-container overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
     <!-- Card Header -->
-    <div class="card-header">
-      <div class="card-header-content">
-        <h2 class="card-title">Products List</h2>
-        <p class="card-subtitle">Track your store's progress to boost your sales.</p>
+    <div class="product-list-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white/95">
+          Danh sách sản phẩm
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+          Theo dõi tiến độ cửa hàng của bạn để tăng doanh số bán hàng.
+        </p>
       </div>
-      <div class="card-header-actions">
-        <button class="btn btn-export" (click)="exportProducts()" title="Xuất dữ liệu">
-          <span class="btn-icon">📥</span>
-          Export
+      <div class="flex items-center gap-3">
+        <button 
+          class="ecommerce-tag-button"
+          (click)="exportProducts()" 
+          title="Xuất dữ liệu">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          Xuất dữ liệu
         </button>
-        <button class="btn btn-primary" (click)="openAddProductModal()">
-          <span class="btn-icon">+</span>
-          Add Product
+        <button 
+          class="ecommerce-tag-button"
+          (click)="openAddProductModal()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Thêm sản phẩm
         </button>
       </div>
     </div>
 
     <!-- Search and Filter Bar -->
-    <div class="search-filter-bar">
-      <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <input 
-          type="text" 
-          placeholder="Search..." 
-          [(ngModel)]="searchTerm"
-          (input)="onSearchInput()"
-          class="search-input">
+    <div class="search-filter-wrapper" style="margin-bottom: 20px;">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex-1 max-w-md">
+          <div class="relative group">
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm sản phẩm..." 
+              [(ngModel)]="searchTerm"
+              (input)="onSearchInput()"
+              style="padding-left: 15px;"
+              class="w-full h-10 pr-11 text-sm rounded-lg border border-gray-200 bg-gray-50/50 text-gray-900 placeholder:text-gray-500 shadow-sm transition-all duration-200 focus:bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 focus:shadow-md dark:border-gray-700 dark:bg-gray-800/50 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800 dark:focus:border-brand-400 dark:focus:ring-brand-400/20">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-200">
+              <svg class="w-4 h-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300" viewBox="0 0 20 20" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"
+                  fill="currentColor" />
+              </svg>
+            </span>
+          </div>
+        </div>
+        <button 
+          class="ecommerce-tag-button"
+          (click)="toggleFilterPanel()" 
+          title="Lọc">
+          <svg class="stroke-current" width="20" height="20" viewBox="0 0 20 20" fill="none">
+            <path d="M2.29004 5.90393H17.7067" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M17.7075 14.0961H2.29085" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
+            <path d="M12.0826 3.33331C13.5024 3.33331 14.6534 4.48431 14.6534 5.90414C14.6534 7.32398 13.5024 8.47498 12.0826 8.47498C10.6627 8.47498 9.51172 7.32398 9.51172 5.90415C9.51172 4.48432 10.6627 3.33331 12.0826 3.33331Z" stroke-width="1.5" />
+            <path d="M7.91745 11.525C6.49762 11.525 5.34662 12.676 5.34662 14.0959C5.34661 15.5157 6.49762 16.6667 7.91745 16.6667C9.33728 16.6667 10.4883 15.5157 10.4883 14.0959C10.4883 12.676 9.33728 11.525 7.91745 11.525Z" stroke-width="1.5" />
+          </svg>
+          Lọc
+        </button>
       </div>
-      <button class="btn btn-filter" (click)="toggleFilterPanel()" title="Bộ lọc">
-        <span class="btn-icon">⚙️</span>
-        Filter
-      </button>
-    </div>
 
-    <!-- Filter Dropdowns (Hidden by default, shown when filter panel is open) -->
-    <div class="filter-panel" *ngIf="showFilterPanel">
-      <div class="filter-controls">
-        <select [(ngModel)]="selectedCategory" (change)="filterProducts()" class="filter-select">
+      <!-- Filter Dropdowns (Hidden by default, shown when filter panel is open) -->
+      <div class="mt-4 pb-4 border-b border-gray-200 dark:border-gray-800" *ngIf="showFilterPanel">
+      <div class="flex flex-wrap gap-3">
+        <select [(ngModel)]="selectedCategory" (change)="filterProducts()" class="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
           <option value="">Tất cả danh mục</option>
           <option value="Điện tử">Điện tử</option>
           <option value="Điện gia dụng">Điện gia dụng</option>
@@ -54,148 +78,156 @@
           <option value="Sách">Sách</option>
           <option value="Gia dụng">Gia dụng</option>
         </select>
-        <select [(ngModel)]="sortBy" (change)="sortProducts()" class="filter-select">
+        <select [(ngModel)]="sortBy" (change)="sortProducts()" class="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
           <option value="name">Sắp xếp theo tên</option>
           <option value="price">Sắp xếp theo giá</option>
           <option value="stock">Sắp xếp theo tồn kho</option>
-          <option value="date">Sắp xếp theo ngày tạo</option>
+          <option value="date">Sắp xếp theo ngày</option>
         </select>
       </div>
     </div>
 
     <!-- Loading State -->
-    <div class="loading-container" *ngIf="isLoading && !showSkeleton">
-      <div class="loading-spinner"></div>
-      <p>Đang tải danh sách sản phẩm...</p>
-    </div>
-
-    <!-- Skeleton Loading -->
-    <div class="skeleton-container" *ngIf="showSkeleton">
-      <div class="skeleton-table">
-        <div class="skeleton-header">
-          <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7]"></div>
-        </div>
-        <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
-          <div class="skeleton-cell skeleton-image"></div>
-          <div class="skeleton-cell skeleton-text"></div>
-          <div class="skeleton-cell skeleton-badge"></div>
-          <div class="skeleton-cell skeleton-price"></div>
-          <div class="skeleton-cell skeleton-badge"></div>
-          <div class="skeleton-cell skeleton-date"></div>
-          <div class="skeleton-cell skeleton-actions"></div>
-        </div>
-      </div>
+    <div class="flex flex-col items-center justify-center py-12" *ngIf="isLoading && !showSkeleton">
+      <div class="w-10 h-10 border-4 border-gray-200 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-500 dark:text-gray-400">Đang tải sản phẩm...</p>
     </div>
 
     <!-- Error State -->
-    <div class="error-container" *ngIf="error && !isLoading">
-      <div class="error-message">
-        <span class="error-icon">⚠️</span>
-        <p>{{ error }}</p>
-        <button class="btn btn-primary" (click)="loadProducts()">Thử lại</button>
-      </div>
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="error && !isLoading">
+      <div class="text-4xl mb-4">⚠️</div>
+      <p class="text-gray-700 dark:text-gray-300 mb-4">{{ error }}</p>
+      <button 
+        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+        (click)="loadProducts()">
+        Thử lại
+      </button>
     </div>
 
     <!-- Products Table -->
-    <div class="table-container" *ngIf="!isLoading && !error && !showSkeleton">
-    <table class="products-table">
-      <thead>
+    <div class="max-w-full overflow-x-auto product-table-wrapper" style="margin-top: 20px;" *ngIf="!isLoading && !error && !showSkeleton">
+    <table class="w-full text-left">
+      <thead class="border-y border-gray-100 dark:border-gray-800">
         <tr>
-          <th class="checkbox-column">
-            <input type="checkbox" class="select-all-checkbox" (change)="toggleSelectAll($event)">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+            <input type="checkbox" class="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500 cursor-pointer" (change)="toggleSelectAll($event)">
           </th>
-          <th class="sortable" (click)="sortByColumn('name')">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('name')">
             Sản phẩm
-            <span class="sort-icon" *ngIf="currentSortColumn === 'name'">
+            <span class="ml-1 text-xs" *ngIf="currentSortColumn === 'name'">
               {{ sortDirection === 'asc' ? '↑' : '↓' }}
             </span>
-            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'name'">↑</span>
           </th>
-          <th class="sortable" (click)="sortByColumn('category')">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('category')">
             Danh mục
-            <span class="sort-icon" *ngIf="currentSortColumn === 'category'">
+            <span class="ml-1 text-xs" *ngIf="currentSortColumn === 'category'">
               {{ sortDirection === 'asc' ? '↑' : '↓' }}
             </span>
-            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'category'">↑</span>
           </th>
-          <th class="sortable" (click)="sortByColumn('brand')">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('brand')">
             Thương hiệu
-            <span class="sort-icon" *ngIf="currentSortColumn === 'brand'">
+            <span class="ml-1 text-xs" *ngIf="currentSortColumn === 'brand'">
               {{ sortDirection === 'asc' ? '↑' : '↓' }}
             </span>
-            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'brand'">↑</span>
           </th>
-          <th class="sortable" (click)="sortByColumn('price')">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('price')">
             Giá
-            <span class="sort-icon" *ngIf="currentSortColumn === 'price'">
+            <span class="ml-1 text-xs" *ngIf="currentSortColumn === 'price'">
               {{ sortDirection === 'asc' ? '↑' : '↓' }}
             </span>
-            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'price'">↑</span>
           </th>
-          <th class="sortable" (click)="sortByColumn('stock')">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('stock')">
             Tồn kho
-            <span class="sort-icon" *ngIf="currentSortColumn === 'stock'">
+            <span class="ml-1 text-xs" *ngIf="currentSortColumn === 'stock'">
               {{ sortDirection === 'asc' ? '↑' : '↓' }}
             </span>
-            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'stock'">↑</span>
           </th>
-          <th class="sortable" (click)="sortByColumn('date')">
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('date')">
             Ngày tạo
-            <span class="sort-icon" *ngIf="currentSortColumn === 'date'">
+            <span class="ml-1 text-xs" *ngIf="currentSortColumn === 'date'">
               {{ sortDirection === 'asc' ? '↑' : '↓' }}
             </span>
-            <span class="sort-icon placeholder" *ngIf="currentSortColumn !== 'date'">↑</span>
           </th>
-          <th class="actions-column"></th>
+          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 text-center">Thao tác</th>
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let product of filteredProducts; trackBy: trackByProductId">
-          <td class="checkbox-column">
-            <input type="checkbox" class="product-checkbox" [checked]="isProductSelected(product)" (change)="toggleProductSelection(product, $event)">
+        <tr *ngFor="let product of filteredProducts; trackBy: trackByProductId" class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+          <td class="px-6 py-8">
+            <input type="checkbox" class="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500 cursor-pointer" [checked]="isProductSelected(product)" (change)="toggleProductSelection(product, $event)">
           </td>
-          <td class="product-cell">
-            <div class="product-info">
-              <img 
-                [src]="getProductImage(product)" 
-                [alt]="product.name" 
-                class="product-thumbnail"
-                loading="lazy"
-                (error)="onImageError($event)">
-              <span class="product-name">{{ product.name }}</span>
+          <td class="px-6 py-8">
+            <div class="flex items-center gap-4">
+              <div class="h-[56px] w-[56px] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+                <img 
+                  [src]="getProductImage(product)" 
+                  [alt]="product.name" 
+                  class="h-full w-full object-cover"
+                  loading="lazy"
+                  (error)="onImageError($event)">
+              </div>
+              <div class="flex flex-col gap-1">
+                <p class="font-semibold text-gray-900 text-theme-sm dark:text-white/95 leading-tight">
+                  {{ product.name }}
+                </p>
+                <span class="text-gray-500 text-theme-xs dark:text-gray-400 font-normal">
+                  SKU: {{ product.sku || product.productCode || 'Chưa có' }}
+                </span>
+              </div>
             </div>
           </td>
-          <td class="category-cell">
-            <span class="category-text">{{ getCategoryName(product.category) }}</span>
-          </td>
-          <td class="brand-cell">
-            <span class="brand-text">{{ getProductBrand(product) }}</span>
-          </td>
-          <td class="price-cell">
-            <span class="price">{{ formatCurrency(product.salePrice || product.price) }}</span>
-          </td>
-          <td class="stock-cell">
-            <span class="stock-badge" [class.in-stock]="product.stock > 0" [class.out-of-stock]="product.stock === 0">
-              {{ product.stock > 0 ? 'Còn hàng' : 'Hết hàng' }}
+          <td class="px-6 py-8">
+            <span class="text-gray-600 text-theme-sm dark:text-gray-400 font-medium">
+              {{ getCategoryName(product.category) }}
             </span>
           </td>
-          <td class="date-cell">
-            {{ product.createdAt | date:'dd MMM, yyyy' }}
+          <td class="px-6 py-8">
+            <span class="text-gray-600 text-theme-sm dark:text-gray-400 font-medium">
+              {{ getProductBrand(product) }}
+            </span>
           </td>
-          <td class="actions-cell">
-            <button class="menu-button" (click)="toggleActionMenu(product.id)" title="Tùy chọn">
-              <span class="menu-icon">⋯</span>
-            </button>
-            <div class="action-menu" *ngIf="activeMenuId === product.id">
-              <button class="menu-item" (click)="editProduct(product); closeActionMenu()">
-                Chỉnh sửa
+          <td class="px-6 py-8">
+            <span class="font-bold text-gray-900 text-theme-sm dark:text-white/95">
+              {{ formatCurrency(product.salePrice || product.price) }}
+            </span>
+          </td>
+          <td class="px-6 py-8">
+            <app-badge size="sm" [color]="product.stock > 0 ? 'success' : 'error'">
+              {{ product.stock > 0 ? 'Còn hàng' : 'Hết hàng' }}
+            </app-badge>
+          </td>
+          <td class="px-6 py-8">
+            <span class="text-gray-500 text-theme-sm dark:text-gray-400">
+              {{ product.createdAt | date:'MMM dd, yyyy' }}
+            </span>
+          </td>
+          <td class="px-6 py-8 text-center">
+            <div class="relative inline-block actions-cell">
+              <button 
+                class="w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-400 transition-all duration-200"
+                (click)="toggleActionMenu(product.id); $event.stopPropagation()" 
+                title="Tùy chọn">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z"></path>
+                </svg>
               </button>
-              <button class="menu-item" (click)="viewProduct(product); closeActionMenu()">
-                Xem
-              </button>
-              <button class="menu-item delete" (click)="deleteProduct(product); closeActionMenu()">
-                Xóa
-              </button>
+              <div 
+                class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden" 
+                *ngIf="activeMenuId === product.id"
+                (click)="$event.stopPropagation()">
+                <button 
+                  class="w-full py-2.5 text-left text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors" 
+                  style="padding-left: 20px; padding-right: 20px;"
+                  (click)="editProduct(product); closeActionMenu(); $event.stopPropagation()">
+                  Chỉnh sửa
+                </button>
+                <button 
+                  class="w-full py-2.5 text-left text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors border-t border-gray-100 dark:border-gray-700" 
+                  style="padding-left: 20px; padding-right: 20px;"
+                  (click)="deleteProduct(product); closeActionMenu(); $event.stopPropagation()">
+                  Xóa
+                </button>
+              </div>
             </div>
           </td>
         </tr>
@@ -205,21 +237,24 @@
   </div>
 
   <!-- Load More Button -->
-  <div class="load-more-container" *ngIf="currentPage < totalPages && !isLoading && !error && !showSkeleton">
+  <div class="flex justify-center mt-6" *ngIf="currentPage < totalPages && !isLoading && !error && !showSkeleton">
     <button 
-      class="btn btn-secondary load-more-btn" 
+      class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
       (click)="loadMoreProducts()"
       [disabled]="isLoadingMore">
       <span *ngIf="!isLoadingMore">Tải thêm sản phẩm</span>
-      <span *ngIf="isLoadingMore">Đang tải...</span>
+      <span *ngIf="isLoadingMore" class="flex items-center gap-2">
+        <div class="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+        Đang tải...
+      </span>
     </button>
   </div>
 
   <!-- Pagination -->
-  <div class="pagination-container" *ngIf="totalPages > 1">
-    <div class="pagination">
+  <div class="mt-6 flex flex-col items-center gap-4" *ngIf="totalPages > 1">
+    <div class="flex gap-2">
       <button 
-        class="pagination-btn" 
+        class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:disabled:opacity-30"
         [disabled]="currentPage === 1"
         (click)="goToPage(currentPage - 1)">
         ‹
@@ -227,24 +262,34 @@
       
       <button 
         *ngFor="let page of getPageNumbers()" 
-        class="pagination-btn"
-        [class.active]="page === currentPage"
+        class="w-10 h-10 flex items-center justify-center rounded-lg border font-medium transition-colors"
+        [class.border-brand-500]="page === currentPage"
+        [class.bg-brand-500]="page === currentPage"
+        [class.text-white]="page === currentPage"
+        [class.border-gray-300]="page !== currentPage"
+        [class.bg-white]="page !== currentPage"
+        [class.text-gray-700]="page !== currentPage"
+        [class.dark:border-gray-700]="page !== currentPage"
+        [class.dark:bg-gray-800]="page !== currentPage"
+        [class.dark:text-gray-400]="page !== currentPage"
+        [class.hover:bg-gray-50]="page !== currentPage"
+        [class.dark:hover:bg-gray-700]="page !== currentPage"
         (click)="goToPage(page)">
         {{ page }}
       </button>
       
       <button 
-        class="pagination-btn" 
+        class="w-10 h-10 flex items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed dark:disabled:opacity-30"
         [disabled]="currentPage === totalPages"
         (click)="goToPage(currentPage + 1)">
         ›
       </button>
     </div>
     
-    <div class="pagination-info">
+    <div class="text-sm text-gray-500 dark:text-gray-400">
       Hiển thị {{ (currentPage - 1) * itemsPerPage + 1 }} - 
       {{ Math.min(currentPage * itemsPerPage, filteredProducts.length) }} 
-      trong {{ filteredProducts.length }} sản phẩm
+      trong số {{ filteredProducts.length }} sản phẩm
     </div>
   </div>
 

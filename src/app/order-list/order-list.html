@@ -1,197 +1,164 @@
-<div class="order-management">
-  <!-- Header -->
-  <div class="page-header">
-    <div class="header-content">
-      <div class="header-left">
-        <button class="back-btn" (click)="goBack()">
-          <span class="back-icon">←</span>
-          Quay lại
-        </button>
-        <div class="title-section">
-          <h1 class="page-title">Quản lý đơn hàng</h1>
-          <p class="page-subtitle">Theo dõi và xử lý đơn hàng của khách hàng</p>
-        </div>
+<div class="w-full py-8 md:py-12">
+  <!-- Main Card Container -->
+  <div class="product-list-container overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+    <!-- Card Header -->
+    <div class="product-list-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white/95">
+          Quản lý đơn hàng
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+          Theo dõi và xử lý đơn hàng của khách hàng.
+        </p>
       </div>
-      <div class="header-right">
-        <button class="refresh-btn" (click)="loadOrders()" [disabled]="loading">
-          <span class="refresh-icon">🔄</span>
+      <div class="flex items-center gap-3">
+        <button 
+          class="ecommerce-tag-button"
+          (click)="loadOrders()" 
+          [disabled]="loading"
+          title="Làm mới dữ liệu">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
           Làm mới
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- Statistics Cards -->
-  <div class="stats-container" *ngIf="!loading && !error">
-    <div class="stat-card">
-      <div class="stat-icon">📦</div>
-      <div class="stat-content">
-        <h3>{{ orders.length }}</h3>
-        <p>Tổng đơn hàng</p>
+    <!-- Search and Filter Bar -->
+    <div class="search-filter-wrapper" style="margin-bottom: 20px;">
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex-1 max-w-md">
+          <div class="relative group">
+            <input 
+              type="text" 
+              placeholder="Tìm theo mã đơn hàng, tên khách hàng..." 
+              [(ngModel)]="searchTerm"
+              (input)="onSearchInput($event)"
+              (keyup.enter)="onSearch()"
+              style="padding-left: 15px;"
+              class="w-full h-10 pr-11 text-sm rounded-lg border border-gray-200 bg-gray-50/50 text-gray-900 placeholder:text-gray-500 shadow-sm transition-all duration-200 focus:bg-white focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/10 focus:shadow-md dark:border-gray-700 dark:bg-gray-800/50 dark:text-white dark:placeholder:text-gray-400 dark:focus:bg-gray-800 dark:focus:border-brand-400 dark:focus:ring-brand-400/20">
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors duration-200">
+              <svg class="w-4 h-4 text-gray-400 group-focus-within:text-gray-600 dark:group-focus-within:text-gray-300" viewBox="0 0 20 20" fill="none">
+                <path fill-rule="evenodd" clip-rule="evenodd"
+                  d="M3.04175 9.37363C3.04175 5.87693 5.87711 3.04199 9.37508 3.04199C12.8731 3.04199 15.7084 5.87693 15.7084 9.37363C15.7084 12.8703 12.8731 15.7053 9.37508 15.7053C5.87711 15.7053 3.04175 12.8703 3.04175 9.37363ZM9.37508 1.54199C5.04902 1.54199 1.54175 5.04817 1.54175 9.37363C1.54175 13.6991 5.04902 17.2053 9.37508 17.2053C11.2674 17.2053 13.003 16.5344 14.357 15.4176L17.177 18.238C17.4699 18.5309 17.9448 18.5309 18.2377 18.238C18.5306 17.9451 18.5306 17.4703 18.2377 17.1774L15.418 14.3573C16.5365 13.0033 17.2084 11.2669 17.2084 9.37363C17.2084 5.04817 13.7011 1.54199 9.37508 1.54199Z"
+                  fill="currentColor" />
+              </svg>
+            </span>
+          </div>
+        </div>
+        <div class="flex items-center gap-3">
+          <select 
+            [(ngModel)]="selectedStatus" 
+            (change)="onStatusChange(selectedStatus)"
+            class="px-3 py-2 text-sm rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+            <option value="">Tất cả trạng thái</option>
+            <option value="pending">Chờ xử lý</option>
+            <option value="paid">Đã thanh toán</option>
+            <option value="shipped">Đang giao</option>
+            <option value="delivered">Đã giao</option>
+            <option value="cancelled">Đã hủy</option>
+          </select>
+          <button 
+            class="ecommerce-tag-button"
+            (click)="clearSearch()" 
+            title="Xóa bộ lọc">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Xóa bộ lọc
+          </button>
+        </div>
       </div>
     </div>
-    <div class="stat-card">
-      <div class="stat-icon">⏳</div>
-      <div class="stat-content">
-        <h3>{{ getOrdersByStatus('pending').length }}</h3>
-        <p>Chờ xử lý</p>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">🚚</div>
-      <div class="stat-content">
-        <h3>{{ getOrdersByStatus('shipped').length }}</h3>
-        <p>Đang giao</p>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">✅</div>
-      <div class="stat-content">
-        <h3>{{ getOrdersByStatus('delivered').length }}</h3>
-        <p>Đã giao</p>
-      </div>
-    </div>
-    <div class="stat-card">
-      <div class="stat-icon">💰</div>
-      <div class="stat-content">
-        <h3>{{ formatCurrency(getTotalRevenue()) }}</h3>
-        <p>Tổng doanh thu</p>
-      </div>
-    </div>
-  </div>
 
-  <!-- Filters -->
-  <div class="filters-section">
-    <div class="search-container">
-      <div class="search-box">
-        <input 
-          type="text" 
-          id="search"
-          [(ngModel)]="searchTerm" 
-          placeholder="Tìm theo mã đơn hàng, tên khách hàng..."
-          class="search-input"
-          (input)="onSearchInput($event)"
-          (keyup.enter)="onSearch()"
-        >
-        <span class="search-icon">🔍</span>
-      </div>
+    <!-- Loading State -->
+    <div class="flex flex-col items-center justify-center py-12" *ngIf="loading && !showSkeleton">
+      <div class="w-10 h-10 border-4 border-gray-200 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-500 dark:text-gray-400">Đang tải đơn hàng...</p>
     </div>
-    
-    <div class="filter-controls">
-      <div class="filter-group">
-        <label for="status">Trạng thái:</label>
-        <select 
-          id="status"
-          [(ngModel)]="selectedStatus" 
-          (change)="onStatusChange(selectedStatus)"
-          class="filter-select"
-        >
-          <option value="">Tất cả</option>
-          <option value="pending">Chờ xử lý</option>
-          <option value="paid">Đã thanh toán</option>
-          <option value="shipped">Đang giao</option>
-          <option value="delivered">Đã giao</option>
-          <option value="cancelled">Đã hủy</option>
-        </select>
-      </div>
 
-      <button class="clear-btn" (click)="clearSearch()">
-        <span class="clear-icon">🗑️</span>
-        Xóa bộ lọc
+    <!-- Error State -->
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="error && !loading">
+      <div class="text-4xl mb-4">⚠️</div>
+      <p class="text-gray-700 dark:text-gray-300 mb-4">{{ error }}</p>
+      <button 
+        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+        (click)="loadOrders()">
+        Thử lại
       </button>
     </div>
-  </div>
 
-  <!-- Loading State -->
-  <div *ngIf="loading" class="loading-state">
-    <div class="skeleton-container">
-      <div class="skeleton-header"></div>
-      <div class="skeleton-row" *ngFor="let item of [1,2,3,4,5]">
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-        <div class="skeleton-cell"></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Error State -->
-  <div *ngIf="error && !loading" class="error-state">
-    <div class="error-icon">⚠️</div>
-    <p>{{ error }}</p>
-    <button class="retry-btn" (click)="loadOrders()">Thử lại</button>
-  </div>
-
-  <!-- Orders Table -->
-  <div *ngIf="!loading && !error" class="orders-container">
-    <div class="table-header">
-      <h3>Tổng cộng: {{ orders.length }} đơn hàng</h3>
-    </div>
-
-    <div class="table-wrapper">
-      <table class="orders-table">
-        <thead>
+    <!-- Orders Table -->
+    <div class="max-w-full overflow-x-auto product-table-wrapper" style="margin-top: 20px;" *ngIf="!loading && !error && !showSkeleton && orders.length > 0">
+      <table class="w-full text-left">
+        <thead class="border-y border-gray-100 dark:border-gray-800">
           <tr>
-            <th>Mã đơn hàng</th>
-            <th>Khách hàng</th>
-            <th>Tổng tiền</th>
-            <th>Phí ship</th>
-            <th>Giảm giá</th>
-            <th>Trạng thái</th>
-            <th>Ngày đặt</th>
-            <th>Thao tác</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Mã đơn hàng</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Khách hàng</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Tổng tiền</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Phí ship</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Giảm giá</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Trạng thái</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày đặt</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 text-center">Thao tác</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let order of orders" class="order-row">
-            <td class="order-number">
-              <strong>{{ order.orderNumber }}</strong>
+          <tr *ngFor="let order of orders" class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+            <td class="px-6 py-8">
+              <span class="font-medium text-gray-900 text-theme-sm dark:text-white/95">{{ order.orderNumber }}</span>
             </td>
-            <td class="customer-info">
-              <div class="customer-name">{{ order.customerName }}</div>
-              <div class="customer-id">ID: {{ order.customerId }}</div>
+            <td class="px-6 py-8">
+              <div>
+                <div class="font-medium text-gray-900 text-theme-sm dark:text-white/95">{{ order.customerName }}</div>
+                <div class="text-gray-500 text-theme-xs dark:text-gray-400">ID: {{ order.customerId }}</div>
+              </div>
             </td>
-            <td class="amount">
-              <strong>{{ formatCurrency(order.totalAmount) }}</strong>
+            <td class="px-6 py-8">
+              <span class="font-medium text-success-600 text-theme-sm dark:text-success-400">{{ formatCurrency(order.totalAmount) }}</span>
             </td>
-            <td class="shipping-fee">
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
               {{ formatCurrency(order.shippingFee) }}
             </td>
-            <td class="discount">
-              <span *ngIf="order.discountAmount > 0" class="discount-amount">
+            <td class="px-6 py-8">
+              <span *ngIf="order.discountAmount > 0" class="text-error-600 text-theme-sm dark:text-error-400 font-medium">
                 -{{ formatCurrency(order.discountAmount) }}
               </span>
-              <span *ngIf="order.discountAmount === 0" class="no-discount">
+              <span *ngIf="order.discountAmount === 0" class="text-gray-400 text-theme-sm">
                 Không
               </span>
             </td>
-            <td class="status">
-              <span class="status-badge" [ngClass]="getStatusBadgeClass(order.status)">
+            <td class="px-6 py-8">
+              <app-badge size="sm" [color]="getStatusColor(order.status)">
                 {{ getStatusText(order.status) }}
-              </span>
+              </app-badge>
             </td>
-            <td class="order-date">
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
               {{ formatDate(order.placedAt) }}
             </td>
-            <td class="actions">
-              <button class="action-btn view-btn" (click)="viewOrderDetails(order)">
-                👁️
-              </button>
-              <select 
-                class="status-select-small" 
-                [value]="order.status"
-                (change)="onOrderStatusChange(order, $event)"
-              >
-                <option value="pending">Chờ xử lý</option>
-                <option value="paid">Đã thanh toán</option>
-                <option value="shipped">Đang giao</option>
-                <option value="delivered">Đã giao</option>
-                <option value="cancelled">Đã hủy</option>
-              </select>
+            <td class="px-6 py-8">
+              <div class="flex items-center justify-center gap-2">
+                <button 
+                  class="inline-flex items-center justify-center w-9 h-9 rounded-lg bg-brand-50 text-brand-600 hover:bg-brand-100 dark:bg-brand-500/10 dark:text-brand-400 transition-colors"
+                  (click)="viewOrderDetails(order)" 
+                  title="Xem chi tiết">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                  </svg>
+                </button>
+                <select 
+                  class="px-2 py-1.5 text-xs rounded-lg border border-gray-200 bg-white text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  [value]="order.status"
+                  (change)="onOrderStatusChange(order, $event)">
+                  <option value="pending">Chờ xử lý</option>
+                  <option value="paid">Đã thanh toán</option>
+                  <option value="shipped">Đang giao</option>
+                  <option value="delivered">Đã giao</option>
+                  <option value="cancelled">Đã hủy</option>
+                </select>
+              </div>
             </td>
           </tr>
         </tbody>
@@ -199,30 +166,30 @@
     </div>
 
     <!-- Empty State -->
-    <div *ngIf="orders.length === 0" class="empty-state">
-      <div class="empty-icon">📦</div>
-      <h3>Không có đơn hàng nào</h3>
-      <p>Chưa có đơn hàng nào được tìm thấy với bộ lọc hiện tại.</p>
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="!loading && !error && !showSkeleton && orders.length === 0">
+      <div class="text-4xl mb-4">📦</div>
+      <p class="text-gray-500 dark:text-gray-400">Không có đơn hàng nào</p>
+      <p class="text-sm text-gray-400 dark:text-gray-500 mt-1">Chưa có đơn hàng nào được tìm thấy với bộ lọc hiện tại.</p>
     </div>
-  </div>
 
-  <!-- Pagination -->
-  <div *ngIf="!loading && !error && orders.length > 0" class="pagination">
-    <button 
-      class="page-btn" 
-      [disabled]="currentPage === 1"
-      (click)="onPageChange(currentPage - 1)"
-    >
-      Trước
-    </button>
-    <span class="page-info">
-      Trang {{ currentPage }}
-    </span>
-    <button 
-      class="page-btn" 
-      (click)="onPageChange(currentPage + 1)"
-    >
-      Sau
-    </button>
+    <!-- Pagination -->
+    <div class="flex justify-center mt-6" *ngIf="!loading && !error && !showSkeleton && orders.length > 0">
+      <div class="flex items-center gap-3">
+        <button 
+          class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+          [disabled]="currentPage === 1"
+          (click)="onPageChange(currentPage - 1)">
+          Trước
+        </button>
+        <span class="text-gray-600 text-theme-sm dark:text-gray-400 px-4">
+          Trang {{ currentPage }}
+        </span>
+        <button 
+          class="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-theme-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03]"
+          (click)="onPageChange(currentPage + 1)">
+          Sau
+        </button>
+      </div>
+    </div>
   </div>
 </div>

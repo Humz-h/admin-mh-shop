@@ -28,6 +28,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+.dark body {
+  background: #111827;
+  color: #f9fafb;
+}
+
 .admin-layout {
   min-height: 100vh;
   display: flex;

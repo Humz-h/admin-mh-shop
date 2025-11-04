@@ -1,131 +1,126 @@
-<div class="user-management">
-  <!-- Back to Dashboard Button -->
-  <div class="back-navigation">
-    <button class="btn btn-secondary" (click)="goBack()">
-      ← Quay lại Dashboard
-    </button>
-  </div>
-
-  <!-- Header Section -->
-  <div class="page-header floating">
-    <div class="header-content">
-      <h1 class="page-title">Quản lý người dùng</h1>
-      <p class="page-subtitle">Quản lý tài khoản khách hàng và phân quyền</p>
-    </div>
-    <div class="header-actions">
-      <button class="btn btn-secondary" (click)="refreshUsers()" title="Làm mới dữ liệu">
-        <span class="btn-icon">🔄</span>
-        Làm mới
-      </button>
-      <button class="btn btn-primary glow" (click)="openAddUserModal()">
-        <span class="btn-icon">+</span>
-        Thêm người dùng
-      </button>
-    </div>
-  </div>
-
-  <!-- Loading State -->
-  <div class="loading-container" *ngIf="loading && !showSkeleton">
-    <div class="loading-spinner"></div>
-    <p>Đang tải danh sách người dùng...</p>
-  </div>
-
-  <!-- Skeleton Loading -->
-  <div class="skeleton-container" *ngIf="showSkeleton">
-    <div class="skeleton-table">
-      <div class="skeleton-header">
-        <div class="skeleton-cell" *ngFor="let i of [1,2,3,4,5,6,7]"></div>
+<div class="w-full py-8 md:py-12">
+  <!-- Main Card Container -->
+  <div class="product-list-container overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
+    <!-- Card Header -->
+    <div class="product-list-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <h3 class="text-xl font-bold text-gray-900 dark:text-white/95">
+          Quản lý người dùng
+        </h3>
+        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+          Quản lý tài khoản khách hàng và phân quyền.
+        </p>
       </div>
-      <div class="skeleton-row" *ngFor="let i of [1,2,3,4,5,6,7,8,9,10]">
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-text"></div>
-        <div class="skeleton-cell skeleton-badge"></div>
-        <div class="skeleton-cell skeleton-date"></div>
-        <div class="skeleton-cell skeleton-date"></div>
+      <div class="flex items-center gap-3">
+        <button 
+          class="ecommerce-tag-button"
+          (click)="refreshUsers()" 
+          title="Làm mới dữ liệu">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+          Làm mới
+        </button>
+        <button 
+          class="ecommerce-tag-button"
+          (click)="openAddUserModal()">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+          </svg>
+          Thêm người dùng
+        </button>
       </div>
     </div>
-  </div>
 
-  <!-- Error State -->
-  <div class="error-container" *ngIf="errorMessage && !loading && !showSkeleton">
-    <div class="error-message">
-      <span class="error-icon">⚠️</span>
-      <p>{{ errorMessage }}</p>
-      <button class="btn btn-primary" (click)="loadCustomers()">Thử lại</button>
+    <!-- Loading State -->
+    <div class="flex flex-col items-center justify-center py-12" *ngIf="loading && !showSkeleton">
+      <div class="w-10 h-10 border-4 border-gray-200 border-t-brand-500 rounded-full animate-spin mb-4"></div>
+      <p class="text-gray-500 dark:text-gray-400">Đang tải danh sách người dùng...</p>
     </div>
-  </div>
 
-  <!-- Users Table -->
-  <div class="table-container" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length > 0">
-    <table class="users-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>Tên đăng nhập</th>
-          <th>Họ tên</th>
-          <th>Email</th>
-          <th>Số điện thoại</th>
-          <th>Vai trò</th>
-          <th>Ngày tạo</th>
-          <th>Ngày cập nhật</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let customer of customers; trackBy: trackByUserId">
-          <td class="user-id">{{ customer.id }}</td>
-          <td class="user-username">
-            <span class="username">{{ customer.username }}</span>
-          </td>
-          <td class="user-fullname">
-            <span class="fullname">{{ customer.fullName || '-' }}</span>
-          </td>
-          <td class="user-email">
-            <span class="email">{{ customer.email }}</span>
-          </td>
-          <td class="user-phone">
-            <span class="phone">{{ customer.phone || '-' }}</span>
-          </td>
-          <td class="user-role">
-            <span class="role-badge" [ngClass]="getRoleClass(customer.role)">
-              {{ getRoleText(customer.role) }}
-            </span>
-          </td>
-          <td class="user-date">{{ formatDate(customer.createdAt) }}</td>
-          <td class="user-date">{{ formatDate(customer.updatedAt) }}</td>
-          <td class="user-actions">
-            <div class="action-buttons">
-              <button class="btn-action btn-edit" (click)="editUser(customer)" title="Chỉnh sửa">
-                ✏️
-              </button>
-              <button class="btn-action btn-delete" (click)="deleteUser(customer)" title="Xóa">
-                🗑️
-              </button>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-
-  <!-- Empty state -->
-  <div class="empty-state" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length === 0">
-    <div class="empty-message">
-      <span class="empty-icon">👥</span>
-      <p>Không có dữ liệu người dùng</p>
+    <!-- Error State -->
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="errorMessage && !loading && !showSkeleton">
+      <div class="text-4xl mb-4">⚠️</div>
+      <p class="text-gray-700 dark:text-gray-300 mb-4">{{ errorMessage }}</p>
+      <button 
+        class="inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2.5 text-theme-sm font-medium text-white shadow-theme-xs hover:bg-brand-600"
+        (click)="loadCustomers()">
+        Thử lại
+      </button>
     </div>
-  </div>
 
-  <!-- User Insert/Edit Modal -->
-  <app-user-insert-edit
-    *ngIf="showModal || selectedCustomer"
-    [showModal]="showModal"
-    [isEditing]="isEditing"
-    [selectedCustomer]="selectedCustomer"
-    (modalClosed)="onModalClosed()"
-    (customerSaved)="onCustomerSaved()">
-  </app-user-insert-edit>
+    <!-- Users Table -->
+    <div class="max-w-full product-table-wrapper" style="margin-top: 20px; overflow-x: auto; overflow-y: visible;" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length > 0">
+      <table class="w-full text-left" style="position: relative;">
+        <thead class="border-y border-gray-100 dark:border-gray-800">
+          <tr>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">ID</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Tên đăng nhập</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Họ tên</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Email</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Số điện thoại</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Vai trò</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày tạo</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày cập nhật</th>
+            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 text-center">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let customer of customers; trackBy: trackByUserId" class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
+            <td class="px-6 py-8">
+              <span class="text-gray-600 text-theme-sm dark:text-gray-400">{{ customer.id }}</span>
+            </td>
+            <td class="px-6 py-8">
+              <span class="font-medium text-gray-900 text-theme-sm dark:text-white/95">{{ customer.username }}</span>
+            </td>
+            <td class="px-6 py-8">
+              <span class="text-gray-600 text-theme-sm dark:text-gray-400">{{ customer.fullName || '-' }}</span>
+            </td>
+            <td class="px-6 py-8">
+              <span class="text-brand-600 text-theme-sm dark:text-brand-400">{{ customer.email }}</span>
+            </td>
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
+              {{ customer.phone || '-' }}
+            </td>
+            <td class="px-6 py-8">
+              <app-badge size="sm" [color]="getRoleColor(customer.role)">
+                {{ getRoleText(customer.role) }}
+              </app-badge>
+            </td>
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
+              {{ formatDate(customer.createdAt) }}
+            </td>
+            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
+              {{ formatDate(customer.updatedAt) }}
+            </td>
+            <td class="px-6 py-8 text-center">
+              <button 
+                class="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                (click)="deleteUser(customer); $event.stopPropagation()"
+                title="Xóa người dùng">
+                Xóa
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Empty State -->
+    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length === 0">
+      <div class="text-4xl mb-4">👥</div>
+      <p class="text-gray-500 dark:text-gray-400">Không có dữ liệu người dùng</p>
+    </div>
+
+    <!-- User Insert/Edit Modal -->
+    <app-user-insert-edit
+      *ngIf="showModal || selectedCustomer"
+      [showModal]="showModal"
+      [isEditing]="isEditing"
+      [selectedCustomer]="selectedCustomer"
+      (modalClosed)="onModalClosed()"
+      (customerSaved)="onCustomerSaved()">
+    </app-user-insert-edit>
+  </div>
 </div>
 

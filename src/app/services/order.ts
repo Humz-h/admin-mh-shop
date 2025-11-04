@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpParams, HttpHeaders } from '@angular/common/http';
 import { Observable, of } from 'rxjs';
 import { map, catchError, shareReplay } from 'rxjs/operators';
 
@@ -32,6 +32,18 @@ export interface OrderResponse {
   pageSize: number;
 }
 
+export interface OrderApiResponse {
+  id: number;
+  userId: number;
+  totalPrice: number;
+  paymentMethod: string;
+  status: string;
+  address: string;
+  phone: string;
+  createdAt: string;
+  orderDetails: any[];
+}
+
 interface CacheEntry {
   data: Order[] | Order;
   timestamp: number;
@@ -48,8 +60,8 @@ export class OrderService {
   private readonly http = inject(HttpClient);
 
   // Lấy tất cả đơn hàng với pagination
-  getOrders(page: number = 1, pageSize: number = 20, customerId?: number): Observable<Order[]> {
-    const cacheKey = `orders_page_${page}_pageSize_${pageSize}_customerId_${customerId || 'all'}`;
+  getOrders(page: number = 1, pageSize: number = 20, customerId?: number, includeItems: boolean = false): Observable<Order[]> {
+    const cacheKey = `orders_page_${page}_pageSize_${pageSize}_customerId_${customerId || 'all'}_includeItems_${includeItems}`;
     const cached = this.getCachedOrders(cacheKey);
     
     if (cached) {
@@ -61,23 +73,28 @@ export class OrderService {
       return this.loadingStates.get(cacheKey)!;
     }
 
+    const headers = new HttpHeaders({
+      'accept': 'text/plain'
+    });
+
     let params = new HttpParams()
       .set('page', page.toString())
-      .set('pageSize', pageSize.toString());
+      .set('pageSize', pageSize.toString())
+      .set('includeItems', includeItems.toString());
     
     if (customerId) {
       params = params.set('customerId', customerId.toString());
     }
 
-    const request$ = this.http.get<Order[]>(this.apiUrl, { params }).pipe(
-      map(orders => {
+    const request$ = this.http.get<OrderApiResponse[]>(this.apiUrl, { params, headers }).pipe(
+      map(apiOrders => {
+        const orders = (apiOrders || []).map(apiOrder => this.mapApiOrderToOrder(apiOrder));
         this.setCachedData(cacheKey, orders);
         this.loadingStates.delete(cacheKey);
-        return orders || [];
+        return orders;
       }),
       shareReplay(1),
       catchError(error => {
-        console.error('Error loading orders:', error);
         this.loadingStates.delete(cacheKey);
         return of([]);
       })
@@ -85,6 +102,39 @@ export class OrderService {
 
     this.loadingStates.set(cacheKey, request$);
     return request$;
+  }
+
+  // Map dữ liệu từ API response sang Order interface
+  private mapApiOrderToOrder(apiOrder: OrderApiResponse): Order {
+    const status = this.normalizeStatus(apiOrder.status);
+    
+    return {
+      id: apiOrder.id,
+      orderNumber: `ORD-${String(apiOrder.id).padStart(4, '0')}`,
+      customerId: apiOrder.userId,
+      customerName: `Khách hàng #${apiOrder.userId}`,
+      totalAmount: apiOrder.totalPrice,
+      shippingFee: 0,
+      discountAmount: 0,
+      status: status as 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled',
+      placedAt: apiOrder.createdAt,
+      orderItems: (apiOrder.orderDetails || []).map((detail, index) => ({
+        id: detail.id || index + 1,
+        productId: detail.productId || 0,
+        productName: detail.productName || 'Sản phẩm không xác định',
+        quantity: detail.quantity || 1,
+        price: detail.price || 0,
+        totalPrice: (detail.quantity || 1) * (detail.price || 0)
+      }))
+    };
+  }
+
+  // Chuẩn hóa status từ API (có thể là "Pending", "Pending", v.v.) về lowercase
+  private normalizeStatus(status: string): string {
+    if (!status) return 'pending';
+    const normalized = status.toLowerCase();
+    const validStatuses = ['pending', 'paid', 'shipped', 'delivered', 'cancelled'];
+    return validStatuses.includes(normalized) ? normalized : 'pending';
   }
 
   // Lấy đơn hàng theo ID

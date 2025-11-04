@@ -362,6 +362,32 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     this.cdr.markForCheck();
   }
 
+  // Lấy URL ảnh để hiển thị (ưu tiên preview, sau đó là imageUrl của product)
+  getDisplayImageUrl(): string {
+    if (this.previewImageUrl) {
+      return this.previewImageUrl;
+    }
+    
+    if (this.product.imageUrl && this.product.imageUrl.trim() !== '') {
+      // Nếu là relative path, tạo full URL
+      if (this.product.imageUrl.startsWith('/')) {
+        return `http://localhost:5000${this.product.imageUrl}`;
+      } else if (this.product.imageUrl.startsWith('http')) {
+        return this.product.imageUrl;
+      } else {
+        return `http://localhost:5000/${this.product.imageUrl}`;
+      }
+    }
+    
+    return '';
+  }
+
+  // Xử lý lỗi khi load ảnh
+  onImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    img.style.display = 'none';
+  }
+
   formatFileSize(bytes: number): string {
     if (bytes === 0) return '0 Bytes';
     
@@ -394,38 +420,116 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   }
 
   saveProduct() {
-    console.log('=== SAVE PRODUCT CALLED IN CHILD ===');
-    console.log('Is editing:', this.isEditing);
-    console.log('Product:', this.product);
-    
     this.clearMessages();
     
     const validationResult = this.validateProductData();
-    console.log('Validation result:', validationResult);
     
     if (!validationResult.isValid) {
-      console.log('Validation failed:', validationResult.message);
       this.saveError = validationResult.message;
       this.cdr.markForCheck();
       return;
     }
     
+    // Nếu có file mới được chọn, upload trước khi save
+    if (this.selectedFile) {
+      this.uploadAndSave();
+      return;
+    }
+    
+    // Nếu không có file mới, save ngay với imageUrl hiện tại
+    this.performSave();
+  }
+
+  // Upload ảnh và sau đó save sản phẩm
+  uploadAndSave() {
+    if (!this.selectedFile) {
+      this.performSave();
+      return;
+    }
+
+    this.isSaving = true;
+    this.isUploading = true;
+    this.uploadError = '';
+    this.cdr.markForCheck();
+
+    this.uploadService.uploadProductImage(this.selectedFile).subscribe({
+      next: (response) => {
+        this.isUploading = false;
+        
+        // Cập nhật imageUrl từ URL đã upload (API trả về imageUrl)
+        const uploadedUrl = response.imageUrl || '';
+        
+        if (uploadedUrl) {
+          // Lưu URL vào product.imageUrl (đảm bảo format đúng)
+          let savedUrl = uploadedUrl;
+          
+          // Nếu là full URL từ localhost, extract relative path
+          if (uploadedUrl.startsWith('http://localhost:5000')) {
+            savedUrl = uploadedUrl.replace('http://localhost:5000', '');
+          }
+          
+          // Đảm bảo relative path bắt đầu bằng /
+          if (savedUrl && !savedUrl.startsWith('http') && !savedUrl.startsWith('/')) {
+            savedUrl = '/' + savedUrl;
+          }
+          
+          this.product.imageUrl = savedUrl;
+          
+          // Cập nhật previewImageUrl để hiển thị (luôn dùng full URL)
+          if (uploadedUrl.startsWith('/')) {
+            this.previewImageUrl = `http://localhost:5000${uploadedUrl}`;
+          } else if (uploadedUrl.startsWith('http')) {
+            this.previewImageUrl = uploadedUrl;
+          } else {
+            this.previewImageUrl = `http://localhost:5000/${uploadedUrl}`;
+          }
+          
+          // Nếu product đã có id (đang edit), tự động lưu imageUrl vào DB trước
+          if (this.product.id && this.product.id > 0) {
+            this.updateImageUrlInDatabase(savedUrl);
+          }
+        }
+        
+        this.selectedFile = null;
+        this.cdr.markForCheck();
+        
+        // Sau khi upload xong, thực hiện save
+        this.performSave();
+      },
+      error: () => {
+        this.isUploading = false;
+        this.isSaving = false;
+        this.uploadError = 'Có lỗi xảy ra khi upload ảnh. Vui lòng thử lại!';
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  // Thực hiện save sản phẩm
+  performSave() {
     try {
       const productData = this.prepareProductData();
-      console.log('Prepared product data:', productData);
+      
+      // Debug: Kiểm tra imageUrl trước khi save
+      if (!productData.imageUrl || productData.imageUrl.trim() === '') {
+        // Nếu không có imageUrl nhưng có previewImageUrl, cảnh báo
+        if (this.previewImageUrl && !this.previewImageUrl.startsWith('data:')) {
+          this.saveError = 'Vui lòng upload ảnh trước khi lưu sản phẩm!';
+          this.isSaving = false;
+          this.cdr.markForCheck();
+          return;
+        }
+      }
       
       this.isSaving = true;
       this.cdr.markForCheck();
       
       if (this.isEditing) {
-        console.log('Calling updateProduct...');
         this.updateProduct(productData);
       } else {
-        console.log('Calling createProduct...');
         this.createProduct(productData);
       }
     } catch (error) {
-      console.error('Error in saveProduct:', error);
       this.saveError = (error as Error).message || 'Có lỗi xảy ra khi chuẩn bị dữ liệu.';
       this.isSaving = false;
       this.cdr.markForCheck();
@@ -470,13 +574,29 @@ export class ProductInsertEdit implements OnInit, OnChanges {
 
   // Prepare data for API
   prepareProductData(): ProductCreateUpdateData {
+    // Đảm bảo imageUrl luôn có giá trị (ưu tiên product.imageUrl)
+    let imageUrl = this.product.imageUrl?.trim() || '';
+    
+    // Nếu imageUrl rỗng và có previewImageUrl từ URL (không phải base64), sử dụng nó
+    if (!imageUrl && this.previewImageUrl && !this.previewImageUrl.startsWith('data:')) {
+      // Loại bỏ base URL nếu có để lưu relative path
+      imageUrl = this.previewImageUrl.replace('http://localhost:5000', '');
+    }
+    
+    // Đảm bảo imageUrl không rỗng khi có ảnh đã upload
+    // Nếu imageUrl là full URL, giữ nguyên (API có thể xử lý được)
+    // Nếu là relative path, đảm bảo bắt đầu bằng /
+    if (imageUrl && !imageUrl.startsWith('http') && !imageUrl.startsWith('/')) {
+      imageUrl = '/' + imageUrl;
+    }
+    
     const productData = {
       name: this.product.name?.trim() || '',
       description: this.product.description?.trim() || '',
       originalPrice: Number(this.product.originalPrice) || 0,
       salePrice: Number(this.product.salePrice) || 0,
       price: Number(this.product.price) || 0,
-      imageUrl: this.product.imageUrl?.trim() || '',
+      imageUrl: imageUrl || '',
       status: this.product.status !== undefined ? this.product.status : true,
       category: this.product.category?.trim() || 'Điện tử',
       productGroup: this.product.productGroup?.trim() || 'Sản phẩm',
@@ -503,27 +623,25 @@ export class ProductInsertEdit implements OnInit, OnChanges {
         this.isSaving = false;
         this.cdr.markForCheck();
         
-        setTimeout(() => {
-          const productFormData: ProductFormData = {
-            id: newProduct.id,
-            name: newProduct.name,
-            description: newProduct.description,
-            originalPrice: newProduct.originalPrice || 0,
-            salePrice: newProduct.salePrice || 0,
-            price: newProduct.price,
-            imageUrl: newProduct.imageUrl,
-            status: newProduct.status,
-            category: newProduct.category,
-            productGroup: newProduct.productGroup || 'Sản phẩm',
-            productCode: newProduct.productCode,
-            stock: newProduct.stock,
-            createdAt: newProduct.createdAt ? (newProduct.createdAt instanceof Date ? newProduct.createdAt : new Date(newProduct.createdAt)) : new Date(),
-            productDetails: newProduct.productDetails,
-            productVariants: newProduct.productVariants
-          };
-          this.productSaved.emit(productFormData);
-          this.closeModal();
-        }, 1500);
+        // Emit event ngay lập tức để component cha xử lý đóng modal và reload
+        const productFormData: ProductFormData = {
+          id: newProduct.id,
+          name: newProduct.name,
+          description: newProduct.description,
+          originalPrice: newProduct.originalPrice || 0,
+          salePrice: newProduct.salePrice || 0,
+          price: newProduct.price,
+          imageUrl: newProduct.imageUrl,
+          status: newProduct.status,
+          category: newProduct.category,
+          productGroup: newProduct.productGroup || 'Sản phẩm',
+          productCode: newProduct.productCode,
+          stock: newProduct.stock,
+          createdAt: newProduct.createdAt ? (newProduct.createdAt instanceof Date ? newProduct.createdAt : new Date(newProduct.createdAt)) : new Date(),
+          productDetails: newProduct.productDetails,
+          productVariants: newProduct.productVariants
+        };
+        this.productSaved.emit(productFormData);
       },
       error: (error) => {
         console.error('=== ERROR CREATING PRODUCT ===');
@@ -535,43 +653,35 @@ export class ProductInsertEdit implements OnInit, OnChanges {
 
   // Update product
   updateProduct(productData: ProductCreateUpdateData) {
-    console.log('=== UPDATE PRODUCT CALLED ===');
-    console.log('Product ID:', this.product.id);
-    console.log('Product data:', productData);
-    
     this.productService.updateProduct(this.product.id, productData).subscribe({
       next: (updatedProduct) => {
-        console.log('=== PRODUCT UPDATED SUCCESSFULLY ===');
-        console.log('Updated product:', updatedProduct);
         this.saveSuccess = 'Cập nhật sản phẩm thành công!';
         this.isSaving = false;
         this.cdr.markForCheck();
         
-        setTimeout(() => {
-          const productFormData: ProductFormData = {
-            id: updatedProduct.id,
-            name: updatedProduct.name,
-            description: updatedProduct.description,
-            originalPrice: updatedProduct.originalPrice || 0,
-            salePrice: updatedProduct.salePrice || 0,
-            price: updatedProduct.price,
-            imageUrl: updatedProduct.imageUrl,
-            status: updatedProduct.status,
-            category: updatedProduct.category,
-            productGroup: updatedProduct.productGroup || 'Sản phẩm',
-            productCode: updatedProduct.productCode,
-            stock: updatedProduct.stock,
-            createdAt: updatedProduct.createdAt ? (updatedProduct.createdAt instanceof Date ? updatedProduct.createdAt : new Date(updatedProduct.createdAt)) : new Date(),
-            productDetails: updatedProduct.productDetails,
-            productVariants: updatedProduct.productVariants
-          };
-          this.productSaved.emit(productFormData);
-          this.closeModal();
-        }, 1000);
+        // Chuẩn bị dữ liệu để emit event
+        const productFormData: ProductFormData = {
+          id: updatedProduct.id,
+          name: updatedProduct.name,
+          description: updatedProduct.description,
+          originalPrice: updatedProduct.originalPrice || 0,
+          salePrice: updatedProduct.salePrice || 0,
+          price: updatedProduct.price,
+          imageUrl: updatedProduct.imageUrl,
+          status: updatedProduct.status,
+          category: updatedProduct.category,
+          productGroup: updatedProduct.productGroup || 'Sản phẩm',
+          productCode: updatedProduct.productCode,
+          stock: updatedProduct.stock,
+          createdAt: updatedProduct.createdAt ? (updatedProduct.createdAt instanceof Date ? updatedProduct.createdAt : new Date(updatedProduct.createdAt)) : new Date(),
+          productDetails: updatedProduct.productDetails,
+          productVariants: updatedProduct.productVariants
+        };
+        
+        // Emit event ngay để component cha xử lý đóng modal và reload
+        this.productSaved.emit(productFormData);
       },
       error: (error) => {
-        console.error('=== ERROR UPDATING PRODUCT ===');
-        console.error('Error:', error);
         this.handleUpdateError(error);
       }
     });
@@ -689,8 +799,44 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     this.uploadService.uploadProductImage(this.selectedFile).subscribe({
       next: (response) => {
         this.isUploading = false;
-        this.product.imageUrl = response.url;
+        
+        // Cập nhật imageUrl từ URL đã upload (API trả về imageUrl)
+        const uploadedUrl = response.imageUrl || '';
+        
+        if (uploadedUrl) {
+          // Lưu URL vào product.imageUrl (đảm bảo format đúng)
+          let savedUrl = uploadedUrl;
+          
+          // Nếu là full URL từ localhost, extract relative path
+          if (uploadedUrl.startsWith('http://localhost:5000')) {
+            savedUrl = uploadedUrl.replace('http://localhost:5000', '');
+          }
+          
+          // Đảm bảo relative path bắt đầu bằng /
+          if (savedUrl && !savedUrl.startsWith('http') && !savedUrl.startsWith('/')) {
+            savedUrl = '/' + savedUrl;
+          }
+          
+          this.product.imageUrl = savedUrl;
+          
+          // Cập nhật previewImageUrl để hiển thị (luôn dùng full URL)
+          if (uploadedUrl.startsWith('/')) {
+            this.previewImageUrl = `http://localhost:5000${uploadedUrl}`;
+          } else if (uploadedUrl.startsWith('http')) {
+            this.previewImageUrl = uploadedUrl;
+          } else {
+            this.previewImageUrl = `http://localhost:5000/${uploadedUrl}`;
+          }
+          
+          // Nếu product đã có id (đang edit), tự động lưu imageUrl vào DB
+          if (this.product.id && this.product.id > 0) {
+            this.updateImageUrlInDatabase(savedUrl);
+          }
+        }
+        
         this.saveSuccess = 'Upload ảnh thành công!';
+        this.selectedFile = null;
+        this.uploadError = '';
         this.cdr.markForCheck();
         
         // Auto clear success message after 3 seconds
@@ -709,6 +855,42 @@ export class ProductInsertEdit implements OnInit, OnChanges {
           this.uploadError = '';
           this.cdr.markForCheck();
         }, 5000);
+      }
+    });
+  }
+
+  // Cập nhật chỉ imageUrl vào DB
+  updateImageUrlInDatabase(imageUrl: string) {
+    if (!this.product.id || this.product.id <= 0) {
+      return;
+    }
+
+    // Lấy thông tin product hiện tại và cập nhật chỉ imageUrl
+    const updateData = {
+      name: this.product.name || '',
+      description: this.product.description || '',
+      originalPrice: Number(this.product.originalPrice) || 0,
+      salePrice: Number(this.product.salePrice) || 0,
+      price: Number(this.product.price) || 0,
+      imageUrl: imageUrl,
+      status: this.product.status !== undefined ? this.product.status : true,
+      category: this.product.category || 'Điện tử',
+      productGroup: this.product.productGroup || 'Sản phẩm',
+      productCode: this.product.productCode || `PRD-${Date.now()}`,
+      stock: Number(this.product.stock) || 0,
+      productDetails: this.productDetails || [],
+      productVariants: this.productVariants || []
+    };
+
+    this.productService.updateProduct(this.product.id, updateData).subscribe({
+      next: () => {
+        // ImageUrl đã được lưu vào DB thành công
+        this.cdr.markForCheck();
+      },
+      error: () => {
+        // Không hiển thị lỗi cho user vì upload ảnh đã thành công
+        // Chỉ log để debug
+        this.cdr.markForCheck();
       }
     });
   }
