@@ -109,7 +109,7 @@
     <table class="w-full text-left">
       <thead class="border-y border-gray-100 dark:border-gray-800">
         <tr>
-          <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">
+          <th class="px-4 py-3 font-medium text-gray-500 text-theme-xs dark:text-gray-400">
             <input type="checkbox" class="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500 cursor-pointer" (change)="toggleSelectAll($event)">
           </th>
           <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 cursor-pointer hover:text-gray-700 dark:hover:text-gray-300" (click)="sortByColumn('name')">
@@ -152,16 +152,16 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let product of filteredProducts; trackBy: trackByProductId" class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-          <td class="px-6 py-8">
+        <tr *ngFor="let product of getPaginatedProducts(); trackBy: trackByProductId" class="product-row">
+          <td class="px-4 py-4">
             <input type="checkbox" class="w-4 h-4 text-brand-500 border-gray-300 rounded focus:ring-brand-500 cursor-pointer" [checked]="isProductSelected(product)" (change)="toggleProductSelection(product, $event)">
           </td>
-          <td class="px-6 py-8">
+          <td class="px-4 py-4">
             <div class="flex items-center gap-4">
-              <div class="h-[56px] w-[56px] overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <div class="product-image-container overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700 flex-shrink-0">
                 <img 
                   [src]="getProductImage(product)" 
-                  [alt]="product.name" 
+                  [alt]="product.name || 'Sản phẩm'" 
                   class="h-full w-full object-cover"
                   loading="lazy"
                   (error)="onImageError($event)">
@@ -176,27 +176,27 @@
               </div>
             </div>
           </td>
-          <td class="px-6 py-8">
+          <td class="px-4 py-4">
             <span class="text-gray-600 text-theme-sm dark:text-gray-400 font-medium">
               {{ getCategoryName(product.category) }}
             </span>
           </td>
-          <td class="px-6 py-8">
+          <td class="px-4 py-4">
             <span class="text-gray-600 text-theme-sm dark:text-gray-400 font-medium">
               {{ getProductBrand(product) }}
             </span>
           </td>
-          <td class="px-6 py-8">
+          <td class="px-4 py-4">
             <span class="font-bold text-gray-900 text-theme-sm dark:text-white/95">
               {{ formatCurrency(product.salePrice || product.price) }}
             </span>
           </td>
-          <td class="px-6 py-8">
+          <td class="px-4 py-4">
             <app-badge size="sm" [color]="product.stock > 0 ? 'success' : 'error'">
               {{ product.stock > 0 ? 'Còn hàng' : 'Hết hàng' }}
             </app-badge>
           </td>
-          <td class="px-6 py-8">
+          <td class="px-4 py-4">
             <span class="text-gray-500 text-theme-sm dark:text-gray-400">
               {{ product.createdAt | date:'MMM dd, yyyy' }}
             </span>
@@ -214,7 +214,11 @@
               <div 
                 class="absolute right-0 mt-2 w-36 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 z-50 overflow-hidden" 
                 *ngIf="activeMenuId === product.id"
-                (click)="$event.stopPropagation()">
+                (click)="$event.stopPropagation()"
+                (keydown.enter)="$event.stopPropagation()"
+                (keydown.escape)="closeActionMenu()"
+                tabindex="0"
+                role="menu">
                 <button 
                   class="w-full py-2.5 text-left text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition-colors" 
                   style="padding-left: 20px; padding-right: 20px;"

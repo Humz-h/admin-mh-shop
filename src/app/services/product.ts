@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams, HttpResponse } from '@angular/common/http';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, throwError, forkJoin } from 'rxjs';
 import { map, catchError, shareReplay, timeout, retryWhen, delay, take, switchMap } from 'rxjs/operators';
 
 interface CacheEntry {
@@ -65,17 +65,49 @@ export interface ProductResponse {
   limit: number;
 }
 
+export interface ProductDetailApiResponse {
+  success: boolean;
+  data: ProductDetail[];
+  message?: string;
+}
+
+export interface ProductDetailCreateUpdate {
+  productId: number;
+  brand: string;
+  origin: string;
+  warranty: string;
+  specifications: string;
+  features: string;
+  additionalInfo: string;
+}
+
+export interface ProductVariantApiResponse {
+  success: boolean;
+  data: ProductVariant[];
+  message?: string;
+}
+
+export interface ProductVariantCreateUpdate {
+  productId: number;
+  variantName: string;
+  attributes: string;
+  price: number;
+  sku: string;
+}
+
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
   private apiUrl = 'http://localhost:5000/api/products';
+  private productDetailsApiUrl = 'http://localhost:5000/api/ProductDetails';
+  private productVariantsApiUrl = 'http://localhost:5000/api/ProductVariants';
   private cache = new Map<string, CacheEntry>();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
   private loadingStates = new Map<string, Observable<Product[]>>(); // Tránh duplicate requests
   private readonly http = inject(HttpClient);
 
-  // Lấy tất cả sản phẩm với cache
+  // Lấy tất cả sản phẩm với cache (không giới hạn số lượng)
   getAllProducts(): Observable<Product[]> {
     const cacheKey = 'all_products';
     const cached = this.getCachedData(cacheKey);
@@ -91,37 +123,120 @@ export class ProductService {
       return this.loadingStates.get(cacheKey)!;
     }
 
-    console.log('Fetching products from API...');
-    const request$ = this.http.get<Product[]>(`${this.apiUrl}?page=1&pageSize=20`).pipe(
-      timeout(10000), // 10 giây timeout
+    console.log('Fetching all products from API...');
+    
+    // Helper function để map products
+    const mapProducts = (products: Product[]): Product[] => {
+      return products.map(product => ({
+        ...product,
+        imageUrl: product.imageUrl && 
+                 typeof product.imageUrl === 'string' &&
+                 product.imageUrl.trim() !== '' && 
+                 !product.imageUrl.includes('placeholder.com') &&
+                 !product.imageUrl.includes('via.placeholder.com')
+                 ? product.imageUrl.trim() 
+                 : (product.imageUrl || ''),
+        status: product.status !== undefined ? product.status : true
+      }));
+    };
+
+    // Thử gọi API không có pagination trước (lấy tất cả)
+    const request$ = this.http.get<Product[]>(this.apiUrl).pipe(
+      timeout(30000), // 30 giây timeout
       map(products => {
-        console.log('Products loaded from API:', products.length);
-        // Map dữ liệu từ API response để đảm bảo tương thích
-        const mappedProducts = products.map(product => ({
-          ...product,
-          imageUrl: product.imageUrl && 
-                   product.imageUrl.trim() !== '' && 
-                   !product.imageUrl.includes('placeholder.com') &&
-                   !product.imageUrl.includes('via.placeholder.com') &&
-                   (product.imageUrl.startsWith('http') || product.imageUrl.startsWith('/'))
-                   ? product.imageUrl 
-                   : '', // Để trống thay vì placeholder URL
-          status: product.status !== undefined ? product.status : true
-        }));
+        console.log('All products loaded from API (no pagination):', products.length);
+        const mappedProducts = mapProducts(products);
         this.setCachedData(cacheKey, mappedProducts);
-        this.loadingStates.delete(cacheKey); // Xóa loading state
+        this.loadingStates.delete(cacheKey);
         return mappedProducts;
       }),
       shareReplay(1),
       catchError(error => {
-        console.error('Error loading products:', error);
-        this.loadingStates.delete(cacheKey); // Xóa loading state
-        return of([]);
+        console.log('API without pagination failed, trying with large pageSize...', error);
+        // Nếu không được, thử với pageSize rất lớn
+        return this.http.get<Product[]>(`${this.apiUrl}?pageSize=10000`).pipe(
+          timeout(30000),
+          map(products => {
+            console.log('All products loaded from API (large pageSize):', products.length);
+            const mappedProducts = mapProducts(products);
+            this.setCachedData(cacheKey, mappedProducts);
+            this.loadingStates.delete(cacheKey);
+            return mappedProducts;
+          }),
+          catchError(pageSizeError => {
+            console.error('Error loading products with large pageSize:', pageSizeError);
+            // Nếu vẫn lỗi, thử lấy từng trang và gộp lại
+            console.log('Trying to load all products by fetching multiple pages...');
+            return this.loadAllProductsByPages();
+          })
+        );
       })
     );
 
     this.loadingStates.set(cacheKey, request$);
     return request$;
+  }
+
+  // Load tất cả sản phẩm bằng cách gọi nhiều trang và gộp lại
+  private loadAllProductsByPages(): Observable<Product[]> {
+    const pageSize = 100; // Lấy 100 sản phẩm mỗi trang
+    
+    const loadPage = (page: number, accumulatedProducts: Product[] = []): Observable<Product[]> => {
+      const params = new HttpParams()
+        .set('page', page.toString())
+        .set('pageSize', pageSize.toString());
+      
+      return this.http.get<Product[]>(this.apiUrl, { params }).pipe(
+        timeout(10000),
+        switchMap(products => {
+          if (!products || products.length === 0) {
+            // Không còn sản phẩm, trả về tất cả đã tích lũy
+            return of(accumulatedProducts);
+          }
+          
+          // Thêm sản phẩm vào danh sách tích lũy
+          const newAccumulated = [...accumulatedProducts, ...products];
+          
+          // Nếu số sản phẩm trả về bằng pageSize, có thể còn trang tiếp theo
+          if (products.length === pageSize) {
+            return loadPage(page + 1, newAccumulated);
+          } else {
+            // Đã hết sản phẩm
+            return of(newAccumulated);
+          }
+        }),
+        catchError(error => {
+          console.error(`Error loading page ${page}:`, error);
+          // Trả về những gì đã tích lũy được
+          return of(accumulatedProducts);
+        })
+      );
+    };
+    
+    return loadPage(1).pipe(
+      map(products => {
+        console.log('All products loaded by pages:', products.length);
+        const mappedProducts = products.map(product => ({
+          ...product,
+          imageUrl: product.imageUrl && 
+                   typeof product.imageUrl === 'string' &&
+                   product.imageUrl.trim() !== '' && 
+                   !product.imageUrl.includes('placeholder.com') &&
+                   !product.imageUrl.includes('via.placeholder.com')
+                   ? product.imageUrl.trim() 
+                   : (product.imageUrl || ''),
+          status: product.status !== undefined ? product.status : true
+        }));
+        this.setCachedData('all_products', mappedProducts);
+        this.loadingStates.delete('all_products');
+        return mappedProducts;
+      }),
+      catchError(error => {
+        console.error('Error in loadAllProductsByPages:', error);
+        this.loadingStates.delete('all_products');
+        return of([]);
+      })
+    );
   }
 
   // Lấy sản phẩm với pagination
@@ -448,9 +563,16 @@ export class ProductService {
             }
           } 
           // Nếu error.error là object (JSON response)
-          else if (typeof error.error !== null && typeof error.error === 'object') {
+          else if (error.error !== null && typeof error.error === 'object') {
             // Kiểm tra các field có thể chứa error message
-            const errorObj = error.error as any;
+            interface ErrorResponse {
+              message?: string;
+              error?: string | { message?: string };
+              title?: string;
+              detail?: string;
+              type?: string;
+            }
+            const errorObj = error.error as ErrorResponse;
             
             if (errorObj.message) {
               errorMessage = errorObj.message;
@@ -566,6 +688,435 @@ export class ProductService {
         take(maxRetries),
         catchError(err => throwError(err))
       )
+    );
+  }
+
+  // ========== ProductDetails API Methods ==========
+
+  // Lấy tất cả ProductDetails
+  getAllProductDetails(): Observable<ProductDetail[]> {
+    return this.http.get<ProductDetailApiResponse>(this.productDetailsApiUrl).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error loading product details:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // Lấy ProductDetails theo ProductId
+  getProductDetailsByProductId(productId: number): Observable<ProductDetail[]> {
+    return this.http.get<ProductDetailApiResponse>(`${this.productDetailsApiUrl}?productId=${productId}`).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error loading product details by productId:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // Tạo ProductDetail mới
+  createProductDetail(productDetail: ProductDetailCreateUpdate): Observable<ProductDetail> {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    const detailData = {
+      productId: productDetail.productId,
+      brand: (productDetail.brand || '').trim(),
+      origin: (productDetail.origin || '').trim(),
+      warranty: (productDetail.warranty || '').trim(),
+      specifications: (productDetail.specifications || '').trim(),
+      features: (productDetail.features || '').trim(),
+      additionalInfo: (productDetail.additionalInfo || '').trim()
+    };
+
+    return this.http.post<ProductDetail>(this.productDetailsApiUrl, detailData, { headers }).pipe(
+      map(newDetail => {
+        this.clearCache();
+        return newDetail;
+      }),
+      catchError(error => {
+        console.error('Error creating product detail:', error);
+        let errorMessage = 'Không thể tạo chi tiết sản phẩm';
+        if (error.status === 400) {
+          errorMessage = 'Dữ liệu không hợp lệ';
+        } else if (error.status === 500) {
+          errorMessage = 'Lỗi server';
+        }
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        throw enhancedError;
+      })
+    );
+  }
+
+  // Tạo nhiều ProductDetails cùng lúc
+  createProductDetails(productDetails: ProductDetailCreateUpdate[]): Observable<ProductDetail[]> {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    const detailsData = productDetails.map(detail => ({
+      productId: detail.productId,
+      brand: (detail.brand || '').trim(),
+      origin: (detail.origin || '').trim(),
+      warranty: (detail.warranty || '').trim(),
+      specifications: (detail.specifications || '').trim(),
+      features: (detail.features || '').trim(),
+      additionalInfo: (detail.additionalInfo || '').trim()
+    }));
+
+    // Gửi từng detail một (có thể tối ưu thành batch nếu backend hỗ trợ)
+    const createObservables = detailsData.map(detailData =>
+      this.http.post<ProductDetail>(this.productDetailsApiUrl, detailData, { headers })
+    );
+
+    return forkJoin(createObservables).pipe(
+      map(results => {
+        this.clearCache();
+        return results;
+      }),
+      catchError(error => {
+        console.error('Error creating product details:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // Cập nhật ProductDetail
+  updateProductDetail(id: number, productDetail: Partial<ProductDetailCreateUpdate>): Observable<ProductDetail> {
+    if (!id || id <= 0) {
+      throw new Error('Invalid product detail ID');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    const updateData: Partial<ProductDetailCreateUpdate> = {};
+    if (productDetail.productId !== undefined) updateData.productId = productDetail.productId;
+    if (productDetail.brand !== undefined) updateData.brand = productDetail.brand.trim();
+    if (productDetail.origin !== undefined) updateData.origin = productDetail.origin.trim();
+    if (productDetail.warranty !== undefined) updateData.warranty = productDetail.warranty.trim();
+    if (productDetail.specifications !== undefined) updateData.specifications = productDetail.specifications.trim();
+    if (productDetail.features !== undefined) updateData.features = productDetail.features.trim();
+    if (productDetail.additionalInfo !== undefined) updateData.additionalInfo = productDetail.additionalInfo.trim();
+
+    return this.http.put<ProductDetail>(`${this.productDetailsApiUrl}/${id}`, updateData, { headers }).pipe(
+      map(updatedDetail => {
+        this.clearCache();
+        return updatedDetail;
+      }),
+      catchError(error => {
+        console.error('Error updating product detail:', error);
+        let errorMessage = 'Không thể cập nhật chi tiết sản phẩm';
+        if (error.status === 400) {
+          errorMessage = 'Dữ liệu không hợp lệ';
+        } else if (error.status === 404) {
+          errorMessage = 'Không tìm thấy chi tiết sản phẩm';
+        } else if (error.status === 500) {
+          errorMessage = 'Lỗi server';
+        }
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        throw enhancedError;
+      })
+    );
+  }
+
+  // Xóa ProductDetail
+  deleteProductDetail(id: number): Observable<void> {
+    if (!id || id <= 0) {
+      throw new Error('Invalid product detail ID');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    return this.http.delete<void>(`${this.productDetailsApiUrl}/${id}`, { headers }).pipe(
+      map(() => {
+        this.clearCache();
+      }),
+      catchError(error => {
+        console.error('Error deleting product detail:', error);
+        let errorMessage = 'Không thể xóa chi tiết sản phẩm';
+        if (error.status === 404) {
+          errorMessage = 'Không tìm thấy chi tiết sản phẩm';
+        } else if (error.status === 500) {
+          errorMessage = 'Lỗi server';
+        }
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        throw enhancedError;
+      })
+    );
+  }
+
+  // Lưu ProductDetails cho một Product (xóa cũ và tạo mới)
+  saveProductDetailsForProduct(productId: number, productDetails: ProductDetailCreateUpdate[]): Observable<ProductDetail[]> {
+    // Lọc bỏ các detail rỗng
+    const validDetails = productDetails.filter(detail =>
+      detail.brand || detail.origin || detail.warranty ||
+      detail.specifications || detail.features || detail.additionalInfo
+    );
+
+    if (validDetails.length === 0) {
+      return of([]);
+    }
+
+    // Lấy danh sách ProductDetails hiện tại của product
+    return this.getProductDetailsByProductId(productId).pipe(
+      switchMap(existingDetails => {
+        // Xóa các ProductDetails cũ
+        const deleteObservables = existingDetails.map(detail => this.deleteProductDetail(detail.id));
+        
+        // Nếu có detail cũ, xóa chúng trước
+        if (deleteObservables.length > 0) {
+          return forkJoin(deleteObservables).pipe(
+            switchMap(() => {
+              // Sau đó tạo mới
+              return this.createProductDetails(validDetails);
+            })
+          );
+        } else {
+          // Nếu không có detail cũ, tạo mới luôn
+          return this.createProductDetails(validDetails);
+        }
+      }),
+      catchError(error => {
+        console.error('Error saving product details:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // ========== ProductVariants API Methods ==========
+
+  // Lấy tất cả ProductVariants
+  getAllProductVariants(): Observable<ProductVariant[]> {
+    return this.http.get<ProductVariantApiResponse>(this.productVariantsApiUrl).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error loading product variants:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // Lấy ProductVariants theo ProductId
+  getProductVariantsByProductId(productId: number): Observable<ProductVariant[]> {
+    return this.http.get<ProductVariantApiResponse>(`${this.productVariantsApiUrl}?productId=${productId}`).pipe(
+      map(response => {
+        if (response.success && response.data) {
+          return response.data;
+        }
+        return [];
+      }),
+      catchError(error => {
+        console.error('Error loading product variants by productId:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // Tạo ProductVariant mới
+  createProductVariant(productVariant: ProductVariantCreateUpdate): Observable<ProductVariant> {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    const variantData = {
+      productId: productVariant.productId,
+      variantName: (productVariant.variantName || '').trim(),
+      attributes: (productVariant.attributes || '').trim(),
+      price: Number(productVariant.price) || 0,
+      sku: (productVariant.sku || '').trim()
+    };
+
+    return this.http.post<ProductVariant>(this.productVariantsApiUrl, variantData, { headers }).pipe(
+      map(newVariant => {
+        this.clearCache();
+        return newVariant;
+      }),
+      catchError(error => {
+        console.error('Error creating product variant:', error);
+        let errorMessage = 'Không thể tạo biến thể sản phẩm';
+        if (error.status === 400) {
+          errorMessage = 'Dữ liệu không hợp lệ';
+        } else if (error.status === 500) {
+          errorMessage = 'Lỗi server';
+        }
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        throw enhancedError;
+      })
+    );
+  }
+
+  // Tạo nhiều ProductVariants cùng lúc
+  createProductVariants(productVariants: ProductVariantCreateUpdate[]): Observable<ProductVariant[]> {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    const variantsData = productVariants.map(variant => ({
+      productId: variant.productId,
+      variantName: (variant.variantName || '').trim(),
+      attributes: (variant.attributes || '').trim(),
+      price: Number(variant.price) || 0,
+      sku: (variant.sku || '').trim()
+    }));
+
+    // Gửi từng variant một (có thể tối ưu thành batch nếu backend hỗ trợ)
+    const createObservables = variantsData.map(variantData =>
+      this.http.post<ProductVariant>(this.productVariantsApiUrl, variantData, { headers })
+    );
+
+    return forkJoin(createObservables).pipe(
+      map(results => {
+        this.clearCache();
+        return results;
+      }),
+      catchError(error => {
+        console.error('Error creating product variants:', error);
+        return of([]);
+      })
+    );
+  }
+
+  // Cập nhật ProductVariant
+  updateProductVariant(id: number, productVariant: Partial<ProductVariantCreateUpdate>): Observable<ProductVariant> {
+    if (!id || id <= 0) {
+      throw new Error('Invalid product variant ID');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    const updateData: Partial<ProductVariantCreateUpdate> = {};
+    if (productVariant.productId !== undefined) updateData.productId = productVariant.productId;
+    if (productVariant.variantName !== undefined) updateData.variantName = productVariant.variantName.trim();
+    if (productVariant.attributes !== undefined) updateData.attributes = productVariant.attributes.trim();
+    if (productVariant.price !== undefined) updateData.price = Number(productVariant.price) || 0;
+    if (productVariant.sku !== undefined) updateData.sku = productVariant.sku.trim();
+
+    return this.http.put<ProductVariant>(`${this.productVariantsApiUrl}/${id}`, updateData, { headers }).pipe(
+      map(updatedVariant => {
+        this.clearCache();
+        return updatedVariant;
+      }),
+      catchError(error => {
+        console.error('Error updating product variant:', error);
+        let errorMessage = 'Không thể cập nhật biến thể sản phẩm';
+        if (error.status === 400) {
+          errorMessage = 'Dữ liệu không hợp lệ';
+        } else if (error.status === 404) {
+          errorMessage = 'Không tìm thấy biến thể sản phẩm';
+        } else if (error.status === 500) {
+          errorMessage = 'Lỗi server';
+        }
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        throw enhancedError;
+      })
+    );
+  }
+
+  // Xóa ProductVariant
+  deleteProductVariant(id: number): Observable<void> {
+    if (!id || id <= 0) {
+      throw new Error('Invalid product variant ID');
+    }
+
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json'
+    };
+
+    return this.http.delete<void>(`${this.productVariantsApiUrl}/${id}`, { headers }).pipe(
+      map(() => {
+        this.clearCache();
+      }),
+      catchError(error => {
+        console.error('Error deleting product variant:', error);
+        let errorMessage = 'Không thể xóa biến thể sản phẩm';
+        if (error.status === 404) {
+          errorMessage = 'Không tìm thấy biến thể sản phẩm';
+        } else if (error.status === 500) {
+          errorMessage = 'Lỗi server';
+        }
+        const enhancedError = new Error(errorMessage) as HttpError;
+        enhancedError.status = error.status;
+        enhancedError.originalError = error;
+        throw enhancedError;
+      })
+    );
+  }
+
+  // Lưu ProductVariants cho một Product (xóa cũ và tạo mới)
+  saveProductVariantsForProduct(productId: number, productVariants: ProductVariantCreateUpdate[]): Observable<ProductVariant[]> {
+    // Lọc bỏ các variant rỗng
+    const validVariants = productVariants.filter(variant =>
+      variant.variantName || variant.attributes || variant.price > 0 || variant.sku
+    );
+
+    if (validVariants.length === 0) {
+      return of([]);
+    }
+
+    // Lấy danh sách ProductVariants hiện tại của product
+    return this.getProductVariantsByProductId(productId).pipe(
+      switchMap(existingVariants => {
+        // Xóa các ProductVariants cũ
+        const deleteObservables = existingVariants.map(variant => this.deleteProductVariant(variant.id));
+        
+        // Nếu có variant cũ, xóa chúng trước
+        if (deleteObservables.length > 0) {
+          return forkJoin(deleteObservables).pipe(
+            switchMap(() => {
+              // Sau đó tạo mới
+              return this.createProductVariants(validVariants);
+            })
+          );
+        } else {
+          // Nếu không có variant cũ, tạo mới luôn
+          return this.createProductVariants(validVariants);
+        }
+      }),
+      catchError(error => {
+        console.error('Error saving product variants:', error);
+        return of([]);
+      })
     );
   }
 }

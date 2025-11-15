@@ -181,18 +181,18 @@ export class ProductList implements OnInit, OnDestroy {
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (products) => {
-          console.log('Products received:', products.length);
           // Map dữ liệu sản phẩm và thêm các thuộc tính bổ sung
           this.products = products.map(product => ({
             ...product,
-            price: Number(product.price) || 0,  // Parse price thành number
-            originalPrice: Number(product.originalPrice) || 0,  // Parse originalPrice
-            salePrice: Number(product.salePrice) || 0,  // Parse salePrice
-            stock: Number(product.stock) || 0,  // Parse stock thành number
-            sku: product.productCode || `SKU-${product.id.toString().padStart(3, '0')}`,  // Sử dụng productCode từ API hoặc tạo SKU
-            category: product.category || this.getCategoryFromName(product.name),      // Sử dụng category từ API hoặc phân loại theo tên
-            status: product.status !== undefined ? product.status : (product.stock > 0),    // Sử dụng status từ API hoặc theo tồn kho
-            createdAt: product.createdAt ? new Date(product.createdAt) : new Date()      // Parse createdAt từ API
+            price: Number(product.price) || 0,
+            originalPrice: Number(product.originalPrice) || 0,
+            salePrice: Number(product.salePrice) || 0,
+            stock: Number(product.stock) || 0,
+            sku: product.productCode || `SKU-${product.id.toString().padStart(3, '0')}`,
+            category: product.category || this.getCategoryFromName(product.name),
+            status: product.status !== undefined ? product.status : (product.stock > 0),
+            createdAt: product.createdAt ? new Date(product.createdAt) : new Date(),
+            imageUrl: product.imageUrl || '' // Giữ nguyên imageUrl từ API
           }));
           
           this.totalPages = Math.ceil(this.products.length / this.itemsPerPage);
@@ -373,7 +373,7 @@ export class ProductList implements OnInit, OnDestroy {
     }
 
     this.filteredProducts = filtered;
-    this.currentPage = 1;  // Reset về trang đầu
+    this.currentPage = 1;  // Reset về trang đầu khi filter
     this.calculateTotalPages();
     this.cdr.markForCheck();
   }
@@ -385,6 +385,9 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Sắp xếp danh sách sản phẩm theo tiêu chí được chọn
   sortProducts() {
+    // Reset về trang 1 khi sort
+    this.currentPage = 1;
+    
     this.filteredProducts.sort((a, b) => {
       switch (this.sortBy) {
         case 'name':
@@ -528,7 +531,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   // Lấy danh sách sản phẩm cho trang hiện tại (phân trang)
-  getPaginatedProducts(): Product[] {
+  getPaginatedProducts(): ProductWithExtras[] {
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const endIndex = startIndex + this.itemsPerPage;
     return this.filteredProducts.slice(startIndex, endIndex);
@@ -585,63 +588,73 @@ export class ProductList implements OnInit, OnDestroy {
 
   // Lấy URL hình ảnh sản phẩm với fallback
   getProductImage(product: ProductWithExtras): string {
-    console.log('Getting image for product:', product.name, 'imageUrl:', product.imageUrl);
+    if (!product) {
+      return this.getPlaceholderImage('?', 'electronics');
+    }
+
+    const imageUrl = product.imageUrl;
     
     // Kiểm tra imageUrl hợp lệ
-    if (product.imageUrl && 
-        product.imageUrl.trim() !== '' && 
-        !product.imageUrl.includes('placeholder.com') &&
-        !product.imageUrl.includes('via.placeholder.com')) {
+    if (imageUrl && 
+        typeof imageUrl === 'string' &&
+        imageUrl.trim() !== '' && 
+        !imageUrl.includes('placeholder.com') &&
+        !imageUrl.includes('via.placeholder.com')) {
       
-      // Nếu là relative path, thêm base URL
-      if (product.imageUrl.startsWith('/')) {
-        const fullUrl = `http://localhost:5000${product.imageUrl}`;
-        console.log('Using full URL:', fullUrl);
-        return fullUrl;
+      const trimmedUrl = imageUrl.trim();
+      
+      // Nếu là data URL (base64), trả về trực tiếp
+      if (trimmedUrl.startsWith('data:')) {
+        return trimmedUrl;
       }
       
-      // Nếu đã là full URL
-      if (product.imageUrl.startsWith('http')) {
-        console.log('Using existing full URL:', product.imageUrl);
-        return product.imageUrl;
+      // Nếu đã là full URL (http/https), trả về trực tiếp
+      if (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://')) {
+        return trimmedUrl;
+      }
+      
+      // Nếu là relative path bắt đầu bằng / (ví dụ: /uploads/products/...)
+      if (trimmedUrl.startsWith('/')) {
+        return `http://localhost:5000${trimmedUrl}`;
       }
       
       // Nếu là relative path không có leading slash
-      const fullUrl = `http://localhost:5000/${product.imageUrl}`;
-      console.log('Adding base URL to relative path:', fullUrl);
-      return fullUrl;
+      if (trimmedUrl.length > 0) {
+        return `http://localhost:5000/${trimmedUrl}`;
+      }
     }
     
-    console.log('No valid imageUrl, creating SVG placeholder');
-    // Tạo SVG placeholder dựa trên tên sản phẩm để tránh network request
+    // Tạo SVG placeholder nếu không có imageUrl hợp lệ
     const firstLetter = product.name ? product.name.charAt(0).toUpperCase() : '?';
-    const category = product.category || 'electronics';
-    
-    const colors = {
-      'electronics': '#4F46E5', // Indigo
-      'clothing': '#EC4899',    // Pink
-      'books': '#10B981',       // Emerald
-      'home': '#F59E0B',        // Amber
+    const category = product.category || this.getCategoryFromName(product.name) || 'electronics';
+    return this.getPlaceholderImage(firstLetter, category);
+  }
+
+  // Tạo SVG placeholder
+  private getPlaceholderImage(firstLetter: string, category: string): string {
+    const colors: Record<string, string> = {
+      'electronics': '#4F46E5',
+      'clothing': '#EC4899',
+      'books': '#10B981',
+      'home': '#F59E0B',
       'Điện tử': '#4F46E5',
       'Thời trang': '#EC4899',
       'Sách': '#10B981',
-      'Điện gia dụng': '#F59E0B'
+      'Điện gia dụng': '#F59E0B',
+      'Thiết bị bếp': '#F59E0B'
     };
     
-    const color = colors[category as keyof typeof colors] || '#6B7280';
+    const color = colors[category] || '#6B7280';
     
-    // Tạo SVG inline để tránh network request
-    const svgData = `data:image/svg+xml;base64,${btoa(`
-      <svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
-        <rect width="100" height="100" fill="${color}" opacity="0.1"/>
-        <rect width="100" height="100" fill="none" stroke="${color}" stroke-width="2"/>
-        <text x="50" y="50" text-anchor="middle" dy=".3em" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="${color}">
-          ${firstLetter}
-        </text>
-      </svg>
-    `)}`;
+    const svgContent = `<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+      <rect width="100" height="100" fill="${color}" opacity="0.1"/>
+      <rect width="100" height="100" fill="none" stroke="${color}" stroke-width="2"/>
+      <text x="50" y="50" text-anchor="middle" dy=".3em" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="${color}">
+        ${firstLetter}
+      </text>
+    </svg>`;
     
-    return svgData;
+    return `data:image/svg+xml;base64,${btoa(svgContent)}`;
   }
 
   // Xử lý lỗi khi load hình ảnh

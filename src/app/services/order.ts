@@ -23,6 +23,8 @@ export interface Order {
   status: 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled';
   placedAt: string;
   orderItems: OrderItem[];
+  phone?: string;
+  address?: string;
 }
 
 export interface OrderResponse {
@@ -30,6 +32,40 @@ export interface OrderResponse {
   total: number;
   page: number;
   pageSize: number;
+}
+
+export interface OrderDetailApiResponse {
+  id?: number;
+  productId?: number;
+  productName?: string;
+  quantity?: number;
+  price?: number;
+}
+
+export interface OrderDetailItem {
+  id: number;
+  orderId: number;
+  productId: number;
+  quantity: number;
+  price: number;
+  order: null;
+  product: {
+    id: number;
+    name: string;
+    productCode: string;
+    originalPrice: number;
+    productGroup: string;
+    discountPercent: number;
+    salePrice: number;
+    stock: number;
+    imageUrl: string;
+    description: string;
+    status: boolean;
+    createdAt: string;
+    productDetails: unknown[];
+    productVariants: unknown[];
+    inventories: null;
+  };
 }
 
 export interface OrderApiResponse {
@@ -41,7 +77,7 @@ export interface OrderApiResponse {
   address: string;
   phone: string;
   createdAt: string;
-  orderDetails: any[];
+  orderDetails: OrderDetailApiResponse[];
 }
 
 interface CacheEntry {
@@ -94,7 +130,7 @@ export class OrderService {
         return orders;
       }),
       shareReplay(1),
-      catchError(error => {
+      catchError(() => {
         this.loadingStates.delete(cacheKey);
         return of([]);
       })
@@ -118,6 +154,8 @@ export class OrderService {
       discountAmount: 0,
       status: status as 'pending' | 'paid' | 'shipped' | 'delivered' | 'cancelled',
       placedAt: apiOrder.createdAt,
+      phone: apiOrder.phone || '',
+      address: apiOrder.address || '',
       orderItems: (apiOrder.orderDetails || []).map((detail, index) => ({
         id: detail.id || index + 1,
         productId: detail.productId || 0,
@@ -259,5 +297,14 @@ export class OrderService {
       case 'cancelled': return 'Đã hủy';
       default: return status;
     }
+  }
+
+  // Lấy chi tiết đơn hàng theo orderId
+  getOrderDetails(orderId: number): Observable<OrderDetailItem[]> {
+    return this.http.get<OrderDetailItem[]>(`http://localhost:5000/api/order-details/order/${orderId}`).pipe(
+      catchError(error => {
+        throw error;
+      })
+    );
   }
 }

@@ -36,22 +36,73 @@
 
 /* Inventory List Spacing Improvements */
 .product-list-container {
-  padding: 32px !important;
+  padding: 2.5rem !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   
   @media (max-width: 768px) {
-    padding: 20px !important;
+    padding: 1.5rem !important;
   }
 }
 
 .product-list-header {
-  margin-bottom: 1.5rem !important;
+  margin-bottom: 2rem !important;
   
   h3 {
+    font-size: 1.75rem !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.025em !important;
     margin-bottom: 0.5rem !important;
+  }
+  
+  p {
+    font-size: 0.9375rem !important;
+    line-height: 1.6 !important;
   }
 }
 
 .product-table-wrapper {
-  margin-top: 20px !important;
+  margin-top: 1.5rem !important;
+}
+
+.product-table-wrapper table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.product-table-wrapper thead th {
+  background: #f9fafb;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  padding: 1.25rem 1.5rem !important;
+  border-bottom: 2px solid #e5e7eb;
+}
+
+.dark .product-table-wrapper thead th {
+  background: #374151;
+  border-bottom-color: #4b5563;
+}
+
+.product-table-wrapper tbody tr {
+  transition: all 0.2s;
+}
+
+.product-table-wrapper tbody tr:hover {
+  background: #f9fafb !important;
+  transform: translateX(2px);
+}
+
+.dark .product-table-wrapper tbody tr:hover {
+  background: #374151 !important;
+}
+
+.product-table-wrapper tbody td {
+  padding: 1.25rem 1.5rem !important;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.dark .product-table-wrapper tbody td {
+  border-bottom-color: #4b5563;
 }
 

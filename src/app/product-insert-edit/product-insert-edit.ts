@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ProductService, ProductDetail, ProductVariant } from '../services/product';
 import { UploadService } from '../services/upload.service';
+import { forkJoin } from 'rxjs';
 
 interface ProductFormData {
   id: number;
@@ -173,8 +174,101 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       productDetails: this.selectedProduct.productDetails,
       productVariants: this.selectedProduct.productVariants
     } as ProductFormData;
-    this.productDetails = [...(this.selectedProduct.productDetails || [])];
-    this.productVariants = [...(this.selectedProduct.productVariants || [])];
+    
+    // Map ProductDetails với format đúng từ selectedProduct (nếu có)
+    this.productDetails = (this.selectedProduct.productDetails || []).map(detail => ({
+      id: detail.id || 0,
+      productId: detail.productId || this.product.id || 0,
+      brand: detail.brand || '',
+      origin: detail.origin || '',
+      warranty: detail.warranty || '',
+      specifications: detail.specifications || '',
+      features: detail.features || '',
+      additionalInfo: detail.additionalInfo || '',
+      createdAt: detail.createdAt ? (detail.createdAt instanceof Date ? detail.createdAt : new Date(detail.createdAt)) : new Date(),
+      updatedAt: detail.updatedAt ? (detail.updatedAt instanceof Date ? detail.updatedAt : new Date(detail.updatedAt)) : new Date()
+    }));
+    
+    // Map ProductVariants với format đúng từ selectedProduct (nếu có)
+    this.productVariants = (this.selectedProduct.productVariants || []).map(variant => ({
+      id: variant.id || 0,
+      productId: variant.productId || this.product.id || 0,
+      variantName: variant.variantName || '',
+      attributes: variant.attributes || '',
+      price: Number(variant.price) || 0,
+      sku: variant.sku || '',
+      createdAt: variant.createdAt ? (variant.createdAt instanceof Date ? variant.createdAt : new Date(variant.createdAt)) : new Date(),
+      updatedAt: variant.updatedAt ? (variant.updatedAt instanceof Date ? variant.updatedAt : new Date(variant.updatedAt)) : new Date()
+    }));
+
+    // Luôn load ProductDetails và ProductVariants từ API khi edit để đảm bảo dữ liệu mới nhất
+    if (this.product.id && this.product.id > 0) {
+      // Load cả ProductDetails và ProductVariants cùng lúc
+      forkJoin({
+        details: this.productService.getProductDetailsByProductId(this.product.id),
+        variants: this.productService.getProductVariantsByProductId(this.product.id)
+      }).subscribe({
+        next: ({ details, variants }) => {
+          // Cập nhật ProductDetails nếu có dữ liệu từ API
+          if (details && details.length > 0) {
+            this.productDetails = details.map(detail => ({
+              id: detail.id || 0,
+              productId: detail.productId || this.product.id || 0,
+              brand: detail.brand || '',
+              origin: detail.origin || '',
+              warranty: detail.warranty || '',
+              specifications: detail.specifications || '',
+              features: detail.features || '',
+              additionalInfo: detail.additionalInfo || '',
+              createdAt: detail.createdAt ? (detail.createdAt instanceof Date ? detail.createdAt : new Date(detail.createdAt)) : new Date(),
+              updatedAt: detail.updatedAt ? (detail.updatedAt instanceof Date ? detail.updatedAt : new Date(detail.updatedAt)) : new Date()
+            }));
+          } else if (this.productDetails.length === 0) {
+            // Nếu không có từ API và cũng không có từ selectedProduct, thêm một detail mặc định
+            this.addProductDetail();
+          }
+
+          // Cập nhật ProductVariants nếu có dữ liệu từ API
+          if (variants && variants.length > 0) {
+            this.productVariants = variants.map(variant => ({
+              id: variant.id || 0,
+              productId: variant.productId || this.product.id || 0,
+              variantName: variant.variantName || '',
+              attributes: variant.attributes || '',
+              price: Number(variant.price) || 0,
+              sku: variant.sku || '',
+              createdAt: variant.createdAt ? (variant.createdAt instanceof Date ? variant.createdAt : new Date(variant.createdAt)) : new Date(),
+              updatedAt: variant.updatedAt ? (variant.updatedAt instanceof Date ? variant.updatedAt : new Date(variant.updatedAt)) : new Date()
+            }));
+          } else if (this.productVariants.length === 0) {
+            // Nếu không có từ API và cũng không có từ selectedProduct, thêm một variant mặc định
+            this.addProductVariant();
+          }
+
+          this.cdr.markForCheck();
+        },
+        error: (error) => {
+          console.error('Error loading ProductDetails/ProductVariants:', error);
+          // Nếu lỗi, vẫn giữ dữ liệu từ selectedProduct (nếu có)
+          // Nếu không có, thêm mặc định
+          if (this.productDetails.length === 0) {
+            this.addProductDetail();
+          }
+          if (this.productVariants.length === 0) {
+            this.addProductVariant();
+          }
+          this.cdr.markForCheck();
+        }
+      });
+    } else {
+      // Nếu không có productId (tạo mới), thêm detail/variant mặc định
+      if (this.productDetails.length === 0) {
+        this.addProductDetail();
+      }
+      if (this.productVariants.length === 0) {
+        this.addProductVariant();
+      }
+    }
     
     // Set preview image if product has imageUrl
     if (this.product.imageUrl && this.product.imageUrl.trim() !== '') {
@@ -260,12 +354,8 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     console.log('- product.salePrice:', this.product.salePrice);
     console.log('- product.price:', this.product.price);
     
-    if (this.productDetails.length === 0) {
-      this.addProductDetail();
-    }
-    if (this.productVariants.length === 0) {
-      this.addProductVariant();
-    }
+    // Chỉ thêm detail/variant mặc định nếu chưa có (sau khi đã load từ API)
+    // Logic này được xử lý trong phần load từ API ở trên
     
     this.clearMessages();
     this.cdr.markForCheck();
@@ -275,7 +365,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   addProductDetail() {
     const newDetail: ProductDetail = {
       id: 0,
-      productId: this.product.id,
+      productId: this.product.id || 0,
       brand: '',
       origin: '',
       warranty: '',
@@ -286,6 +376,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       updatedAt: new Date()
     };
     this.productDetails.push(newDetail);
+    this.cdr.markForCheck();
   }
 
   // Remove ProductDetail
@@ -299,7 +390,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   addProductVariant() {
     const newVariant: ProductVariant = {
       id: 0,
-      productId: this.product.id,
+      productId: this.product.id || 0,
       variantName: '',
       attributes: '',
       price: 0,
@@ -308,6 +399,7 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       updatedAt: new Date()
     };
     this.productVariants.push(newVariant);
+    this.cdr.markForCheck();
   }
 
   // Remove ProductVariant
@@ -483,11 +575,6 @@ export class ProductInsertEdit implements OnInit, OnChanges {
           } else {
             this.previewImageUrl = `http://localhost:5000/${uploadedUrl}`;
           }
-          
-          // Nếu product đã có id (đang edit), tự động lưu imageUrl vào DB trước
-          if (this.product.id && this.product.id > 0) {
-            this.updateImageUrlInDatabase(savedUrl);
-          }
         }
         
         this.selectedFile = null;
@@ -590,6 +677,43 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       imageUrl = '/' + imageUrl;
     }
     
+    // Chuẩn bị ProductDetails với format đúng
+    const preparedProductDetails = this.productDetails
+      .map(detail => ({
+        id: detail.id || 0,
+        productId: this.product.id || 0,
+        brand: (detail.brand || '').trim(),
+        origin: (detail.origin || '').trim(),
+        warranty: (detail.warranty || '').trim(),
+        specifications: (detail.specifications || '').trim(),
+        features: (detail.features || '').trim(),
+        additionalInfo: (detail.additionalInfo || '').trim(),
+        createdAt: detail.createdAt || new Date(),
+        updatedAt: detail.updatedAt || new Date()
+      }))
+      // Lọc bỏ các detail hoàn toàn rỗng (chỉ giữ lại nếu có ít nhất một trường có dữ liệu)
+      .filter(detail => 
+        detail.brand || detail.origin || detail.warranty || 
+        detail.specifications || detail.features || detail.additionalInfo
+      );
+    
+    // Chuẩn bị ProductVariants với format đúng
+    const preparedProductVariants = this.productVariants
+      .map(variant => ({
+        id: variant.id || 0,
+        productId: this.product.id || 0,
+        variantName: (variant.variantName || '').trim(),
+        attributes: (variant.attributes || '').trim(),
+        price: Number(variant.price) || 0,
+        sku: (variant.sku || '').trim(),
+        createdAt: variant.createdAt || new Date(),
+        updatedAt: variant.updatedAt || new Date()
+      }))
+      // Lọc bỏ các variant hoàn toàn rỗng (chỉ giữ lại nếu có ít nhất một trường có dữ liệu)
+      .filter(variant => 
+        variant.variantName || variant.attributes || variant.price > 0 || variant.sku
+      );
+    
     const productData = {
       name: this.product.name?.trim() || '',
       description: this.product.description?.trim() || '',
@@ -602,8 +726,8 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       productGroup: this.product.productGroup?.trim() || 'Sản phẩm',
       productCode: this.product.productCode?.trim() || `PRD-${Date.now()}`,
       stock: Number(this.product.stock) || 0,
-      productDetails: this.productDetails,
-      productVariants: this.productVariants
+      productDetails: preparedProductDetails,
+      productVariants: preparedProductVariants
     };
     
     return productData;
@@ -619,6 +743,60 @@ export class ProductInsertEdit implements OnInit, OnChanges {
       next: (newProduct) => {
         console.log('=== PRODUCT CREATED SUCCESSFULLY ===');
         console.log('New product:', newProduct);
+        
+        // Lưu ProductDetails vào bảng ProductDetails riêng
+        const productDetailsToSave = this.productDetails
+          .map(detail => ({
+            productId: newProduct.id,
+            brand: (detail.brand || '').trim(),
+            origin: (detail.origin || '').trim(),
+            warranty: (detail.warranty || '').trim(),
+            specifications: (detail.specifications || '').trim(),
+            features: (detail.features || '').trim(),
+            additionalInfo: (detail.additionalInfo || '').trim()
+          }))
+          .filter(detail => 
+            detail.brand || detail.origin || detail.warranty ||
+            detail.specifications || detail.features || detail.additionalInfo
+          );
+
+        if (productDetailsToSave.length > 0) {
+          this.productService.saveProductDetailsForProduct(newProduct.id, productDetailsToSave).subscribe({
+            next: (savedDetails) => {
+              console.log('ProductDetails saved successfully:', savedDetails);
+            },
+            error: (error) => {
+              console.error('Error saving ProductDetails:', error);
+              // Không block việc tạo product, chỉ log lỗi
+            }
+          });
+        }
+
+        // Lưu ProductVariants vào bảng ProductVariants riêng
+        const productVariantsToSave = this.productVariants
+          .map(variant => ({
+            productId: newProduct.id,
+            variantName: (variant.variantName || '').trim(),
+            attributes: (variant.attributes || '').trim(),
+            price: Number(variant.price) || 0,
+            sku: (variant.sku || '').trim()
+          }))
+          .filter(variant => 
+            variant.variantName || variant.attributes || variant.price > 0 || variant.sku
+          );
+
+        if (productVariantsToSave.length > 0) {
+          this.productService.saveProductVariantsForProduct(newProduct.id, productVariantsToSave).subscribe({
+            next: (savedVariants) => {
+              console.log('ProductVariants saved successfully:', savedVariants);
+            },
+            error: (error) => {
+              console.error('Error saving ProductVariants:', error);
+              // Không block việc tạo product, chỉ log lỗi
+            }
+          });
+        }
+
         this.saveSuccess = 'Tạo sản phẩm thành công!';
         this.isSaving = false;
         this.cdr.markForCheck();
@@ -655,6 +833,62 @@ export class ProductInsertEdit implements OnInit, OnChanges {
   updateProduct(productData: ProductCreateUpdateData) {
     this.productService.updateProduct(this.product.id, productData).subscribe({
       next: (updatedProduct) => {
+        console.log('=== PRODUCT UPDATED SUCCESSFULLY ===');
+        console.log('Updated product:', updatedProduct);
+        
+        // Lưu ProductDetails vào bảng ProductDetails riêng
+        const productDetailsToSave = this.productDetails
+          .map(detail => ({
+            productId: updatedProduct.id,
+            brand: (detail.brand || '').trim(),
+            origin: (detail.origin || '').trim(),
+            warranty: (detail.warranty || '').trim(),
+            specifications: (detail.specifications || '').trim(),
+            features: (detail.features || '').trim(),
+            additionalInfo: (detail.additionalInfo || '').trim()
+          }))
+          .filter(detail => 
+            detail.brand || detail.origin || detail.warranty ||
+            detail.specifications || detail.features || detail.additionalInfo
+          );
+
+        if (productDetailsToSave.length > 0) {
+          this.productService.saveProductDetailsForProduct(updatedProduct.id, productDetailsToSave).subscribe({
+            next: (savedDetails) => {
+              console.log('ProductDetails saved successfully:', savedDetails);
+            },
+            error: (error) => {
+              console.error('Error saving ProductDetails:', error);
+              // Không block việc cập nhật product, chỉ log lỗi
+            }
+          });
+        }
+
+        // Lưu ProductVariants vào bảng ProductVariants riêng
+        const productVariantsToSave = this.productVariants
+          .map(variant => ({
+            productId: updatedProduct.id,
+            variantName: (variant.variantName || '').trim(),
+            attributes: (variant.attributes || '').trim(),
+            price: Number(variant.price) || 0,
+            sku: (variant.sku || '').trim()
+          }))
+          .filter(variant => 
+            variant.variantName || variant.attributes || variant.price > 0 || variant.sku
+          );
+
+        if (productVariantsToSave.length > 0) {
+          this.productService.saveProductVariantsForProduct(updatedProduct.id, productVariantsToSave).subscribe({
+            next: (savedVariants) => {
+              console.log('ProductVariants saved successfully:', savedVariants);
+            },
+            error: (error) => {
+              console.error('Error saving ProductVariants:', error);
+              // Không block việc cập nhật product, chỉ log lỗi
+            }
+          });
+        }
+
         this.saveSuccess = 'Cập nhật sản phẩm thành công!';
         this.isSaving = false;
         this.cdr.markForCheck();
@@ -827,11 +1061,6 @@ export class ProductInsertEdit implements OnInit, OnChanges {
           } else {
             this.previewImageUrl = `http://localhost:5000/${uploadedUrl}`;
           }
-          
-          // Nếu product đã có id (đang edit), tự động lưu imageUrl vào DB
-          if (this.product.id && this.product.id > 0) {
-            this.updateImageUrlInDatabase(savedUrl);
-          }
         }
         
         this.saveSuccess = 'Upload ảnh thành công!';
@@ -859,41 +1088,6 @@ export class ProductInsertEdit implements OnInit, OnChanges {
     });
   }
 
-  // Cập nhật chỉ imageUrl vào DB
-  updateImageUrlInDatabase(imageUrl: string) {
-    if (!this.product.id || this.product.id <= 0) {
-      return;
-    }
-
-    // Lấy thông tin product hiện tại và cập nhật chỉ imageUrl
-    const updateData = {
-      name: this.product.name || '',
-      description: this.product.description || '',
-      originalPrice: Number(this.product.originalPrice) || 0,
-      salePrice: Number(this.product.salePrice) || 0,
-      price: Number(this.product.price) || 0,
-      imageUrl: imageUrl,
-      status: this.product.status !== undefined ? this.product.status : true,
-      category: this.product.category || 'Điện tử',
-      productGroup: this.product.productGroup || 'Sản phẩm',
-      productCode: this.product.productCode || `PRD-${Date.now()}`,
-      stock: Number(this.product.stock) || 0,
-      productDetails: this.productDetails || [],
-      productVariants: this.productVariants || []
-    };
-
-    this.productService.updateProduct(this.product.id, updateData).subscribe({
-      next: () => {
-        // ImageUrl đã được lưu vào DB thành công
-        this.cdr.markForCheck();
-      },
-      error: () => {
-        // Không hiển thị lỗi cho user vì upload ảnh đã thành công
-        // Chỉ log để debug
-        this.cdr.markForCheck();
-      }
-    });
-  }
 
   // Calculate sale price based on original price and discount percentage
   calculateSalePrice() {

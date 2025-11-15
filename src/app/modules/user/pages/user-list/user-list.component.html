@@ -2,33 +2,31 @@
   <!-- Main Card Container -->
   <div class="product-list-container overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-white/[0.03]">
     <!-- Card Header -->
-    <div class="product-list-header flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div>
-        <h3 class="text-xl font-bold text-gray-900 dark:text-white/95">
-          Quản lý người dùng
-        </h3>
-        <p class="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-          Quản lý tài khoản khách hàng và phân quyền.
-        </p>
-      </div>
-      <div class="flex items-center gap-3">
-        <button 
-          class="ecommerce-tag-button"
-          (click)="refreshUsers()" 
-          title="Làm mới dữ liệu">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-          </svg>
-          Làm mới
-        </button>
-        <button 
-          class="ecommerce-tag-button"
-          (click)="openAddUserModal()">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          Thêm người dùng
-        </button>
+    <div class="product-list-header">
+      <div class="header-content">
+        <div class="header-text">
+          <h3>Quản lý người dùng</h3>
+          <p>Quản lý tài khoản khách hàng và phân quyền.</p>
+        </div>
+        <div class="header-actions">
+          <button 
+            class="action-button secondary"
+            (click)="refreshUsers()" 
+            title="Làm mới dữ liệu">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            <span>Làm mới</span>
+          </button>
+          <button 
+            class="action-button primary"
+            (click)="openAddUserModal()">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Thêm người dùng</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -50,55 +48,58 @@
     </div>
 
     <!-- Users Table -->
-    <div class="max-w-full product-table-wrapper" style="margin-top: 20px; overflow-x: auto; overflow-y: visible;" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length > 0">
-      <table class="w-full text-left" style="position: relative;">
-        <thead class="border-y border-gray-100 dark:border-gray-800">
+    <div class="product-table-wrapper" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length > 0">
+      <table class="users-table">
+        <thead>
           <tr>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">ID</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Tên đăng nhập</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Họ tên</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Email</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Số điện thoại</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Vai trò</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày tạo</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400">Ngày cập nhật</th>
-            <th class="px-6 py-8 font-medium text-gray-500 text-theme-xs dark:text-gray-400 text-center">Thao tác</th>
+            <th>ID</th>
+            <th>Tên đăng nhập</th>
+            <th>Họ tên</th>
+            <th>Email</th>
+            <th>Số điện thoại</th>
+            <th>Vai trò</th>
+            <th>Ngày tạo</th>
+            <th>Ngày cập nhật</th>
+            <th class="text-center">Thao tác</th>
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let customer of customers; trackBy: trackByUserId" class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50/50 dark:hover:bg-gray-800/30 transition-colors">
-            <td class="px-6 py-8">
-              <span class="text-gray-600 text-theme-sm dark:text-gray-400">{{ customer.id }}</span>
+          <tr *ngFor="let customer of customers; trackBy: trackByUserId" class="user-row">
+            <td>
+              <span class="user-id">{{ customer.id }}</span>
             </td>
-            <td class="px-6 py-8">
-              <span class="font-medium text-gray-900 text-theme-sm dark:text-white/95">{{ customer.username }}</span>
+            <td>
+              <span class="username">{{ customer.username }}</span>
             </td>
-            <td class="px-6 py-8">
-              <span class="text-gray-600 text-theme-sm dark:text-gray-400">{{ customer.fullName || '-' }}</span>
+            <td>
+              <span class="fullname">{{ customer.fullName || '-' }}</span>
             </td>
-            <td class="px-6 py-8">
-              <span class="text-brand-600 text-theme-sm dark:text-brand-400">{{ customer.email }}</span>
+            <td>
+              <span class="email">{{ customer.email }}</span>
             </td>
-            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
-              {{ customer.phone || '-' }}
+            <td>
+              <span class="phone">{{ customer.phone || '-' }}</span>
             </td>
-            <td class="px-6 py-8">
+            <td>
               <app-badge size="sm" [color]="getRoleColor(customer.role)">
                 {{ getRoleText(customer.role) }}
               </app-badge>
             </td>
-            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
-              {{ formatDate(customer.createdAt) }}
+            <td>
+              <span class="date-text">{{ formatDate(customer.createdAt) }}</span>
             </td>
-            <td class="px-6 py-8 text-gray-600 text-theme-sm dark:text-gray-400">
-              {{ formatDate(customer.updatedAt) }}
+            <td>
+              <span class="date-text">{{ formatDate(customer.updatedAt) }}</span>
             </td>
-            <td class="px-6 py-8 text-center">
+            <td class="actions-cell">
               <button 
-                class="text-sm font-medium text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors"
+                class="delete-button"
                 (click)="deleteUser(customer); $event.stopPropagation()"
                 title="Xóa người dùng">
-                Xóa
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                </svg>
+                <span>Xóa</span>
               </button>
             </td>
           </tr>
@@ -107,9 +108,18 @@
     </div>
 
     <!-- Empty State -->
-    <div class="flex flex-col items-center justify-center py-12 text-center" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length === 0">
-      <div class="text-4xl mb-4">👥</div>
-      <p class="text-gray-500 dark:text-gray-400">Không có dữ liệu người dùng</p>
+    <div class="empty-state" *ngIf="!loading && !errorMessage && !showSkeleton && customers.length === 0">
+      <div class="empty-icon">👥</div>
+      <h3 class="empty-title">Không có dữ liệu người dùng</h3>
+      <p class="empty-description">Bắt đầu bằng cách thêm người dùng mới vào hệ thống.</p>
+      <button 
+        class="action-button primary"
+        (click)="openAddUserModal()">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>Thêm người dùng đầu tiên</span>
+      </button>
     </div>
 
     <!-- User Insert/Edit Modal -->
